@@ -29,7 +29,7 @@ svg{width:100%;height:auto;display:block}
 <h2 style="margin-top:16px">Savings records</h2>
 <div class="row"><input id="snum" placeholder="Deposit number" style="width:150px"><input id="sdate" type="date" style="width:150px"><button id="ssave">Save number &amp; date</button></div>
 <div class="row" style="margin-top:8px"><select id="spl"></select><input id="samt" type="number" placeholder="Amount KES"><input id="scode" placeholder="M-Pesa code" maxlength="20"><button class="b" id="sdep">Record deposit</button><button class="s" id="swd">Record withdrawal</button></div>
-<div id="smsg" class="mu" style="margin-top:6px"></div><div class="mu" id="stot" style="margin:8px 0"></div><div class="sc"><table id="sall"></table></div>
+<div id="smsg" class="mu" style="margin-top:6px"></div><label class="mu" style="display:block;margin:6px 0"><input type="checkbox" id="shw" style="width:auto"> Show the deposit number to players</label><div class="mu" id="stot" style="margin:8px 0"></div><div class="sc"><table id="sall"></table></div>
 <h2 style="margin-top:16px">Players (play money)</h2><div class="row" style="margin-bottom:8px"><span class="mu">New players start with $</span><input id="sc" type="number" step="any" style="width:90px"><button id="scb">Save</button></div><div class="sc"><table id="pl"></table></div></div>
 </main><script>
 const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
@@ -109,17 +109,18 @@ function renderSv(){
  const v=S.savings,id=me&&me.id,p=id&&S.players[id];
  $('#claim').hidden=!(p&&!p.user);$('#so').hidden=!me;authUi();$('#lbcard').hidden=!host;$('#sv').hidden=!(me||host);$('#svt').parentElement.hidden=!me;
  $('#svt').textContent=K(p?p.saved:0);$('#cd').textContent=cdText();
- $('#dep').innerHTML=v.number?'<div class="row"><span class="mu">Send your savings to:</span><b>'+esc(v.number)+'</b><button id="cpn">Copy number</button></div><div class="mu" style="margin-top:6px">After you send, give the host your M-Pesa code. It counts as saved once the host records it. Savings never go into the game.</div>':'<div class="mu">The host hasn’t added a deposit number yet.</div>';
+ $('#dep').innerHTML=v.number?'<div class="row"><span class="mu">Send your savings to:</span><b>'+esc(v.number)+'</b><button id="cpn">Copy number</button></div><div class="mu" style="margin-top:6px">After you send, give the host your M-Pesa code. It counts as saved once the host records it. Savings never go into the game.</div>':(host?'<div class="mu">You haven’t added a deposit number yet.</div>':'<div class="mu">Ask the host how to send your savings. After you send, give the host your M-Pesa code. It counts as saved once the host records it.</div>');
  $('#svl').innerHTML='<tr><th>Date</th><th>Player</th><th>Type</th><th>Amount</th><th>Code</th>'+(host?'<th></th>':'')+'</tr>'+(v.log||[]).slice().reverse().map(e=>'<tr><td>'+new Date(e.t).toLocaleDateString()+'</td><td>'+esc(e.name)+'</td><td>'+e.type+'</td><td>'+K(e.amt)+'</td><td>'+esc(e.code||'')+'</td>'+(host?'<td><button data-sd="'+e.lid+'">Delete</button></td>':'')+'</tr>').join('');
  if(!host)return;
  const ae=document.activeElement.id;
  if(ae!=='snum')$('#snum').value=v.number||'';
- if(ae!=='sdate')$('#sdate').value=v.date;if(ae!=='sc')$('#sc').value=S.startCash;
+ if(ae!=='sdate')$('#sdate').value=v.date;if(ae!=='sc')$('#sc').value=S.startCash;if(ae!=='shw')$('#shw').checked=!!v.show;
  const ops=Object.entries(S.players).map(([i,q])=>'<option value="'+i+'">'+esc(q.name)+'</option>').join('');
  if($('#spl').dataset.h!==ops){const cur=$('#spl').value;$('#spl').innerHTML=ops;$('#spl').dataset.h=ops;if(cur)$('#spl').value=cur}
  $('#stot').textContent='Group total locked: '+K(v.total||0);
  $('#sall').innerHTML='<tr><th>Player</th><th>Saved</th></tr>'+Object.values(S.players).map(q=>'<tr><td>'+esc(q.name)+'</td><td>'+K(q.saved)+'</td></tr>').join('')}
 async function act(p,b){await api(p,b);load()}
+document.addEventListener('change',e=>{if(e.target.id==='shw'&&host)act('svshow',{on:e.target.checked})});
 document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(d.k){sel=d.k;off=0;hx=null;load()}if(d.tf){tf=+d.tf;off=0;vis=60;render()}if(t.id==='zi'){vis=Math.max(15,Math.round(vis*.8));drawChart()}if(t.id==='zo'){vis=Math.min(240,Math.round(vis*1.25));drawChart()}if(t.id==='zr'){vis=60;off=0;drawChart()}
  if(t.id==='cp'){try{await navigator.clipboard.writeText(location.origin);t.textContent='Copied!'}catch(x){t.textContent='Copy it from the address bar'}setTimeout(()=>t.textContent='Copy link',2000)}

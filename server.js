@@ -28,7 +28,7 @@ const bad=u=>{const f=fails[u];fails[u]=f&&Date.now()-f.t<6e5?{n:f.n+1,t:Date.no
 const svTot=id=>+S.sv.log.filter(e=>e.pid===id).reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2);
 const who=req=>{const p=S.players[req.headers['x-id']];return p&&p.t===req.headers['x-token']?req.headers['x-id']:null};
 const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||'',avg:p.avg||{}});
-const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,k===sym?a:{price:a.price,trend:a.trend,c:a.c.slice(-1)}])),auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,k===sym?a:{price:a.price,trend:a.trend,c:a.c.slice(-1)}])),auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:(adm||S.sv.show)?S.sv.number:'',show:!!S.sv.show,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
 const zlib=require('zlib');
 const sendz=(req,res,o)=>{const b=Buffer.from(JSON.stringify(o));if(/gzip/.test(req.headers['accept-encoding']||'')){res.writeHead(200,{'content-type':'application/json','content-encoding':'gzip'});res.end(zlib.gzipSync(b))}else{res.writeHead(200,{'content-type':'application/json'});res.end(b)}};
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
@@ -84,6 +84,7 @@ http.createServer((req,res)=>{
   else if(r==='roundstart')S.round={end:Date.now()+Math.min(1440,Math.max(.1,+b.min||10))*60000,done:false,winner:null};
   else if(r==='roundend'){if(S.round.end&&!S.round.done)finish()}
   else if(r==='roundreset')S.round={end:0,done:false,winner:null};
+  else if(r==='svshow')S.sv.show=!!b.on;
   else if(r==='auto')S.auto=!!b.on;
   save();send(res,{ok:1})})
 }).listen(PORT,()=>console.log('Trading Room on port '+PORT));
