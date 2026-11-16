@@ -4,17 +4,23 @@ const bk=()=>Math.floor(Date.now()/B)*B;
 function mk(price){let p=price,c=[];const t=bk();for(let i=0;i<N;i++){const cl=p,o=+(cl/(1+(Math.random()-.5)*.012)).toFixed(2);c.unshift({t:t-i*B,o,h:+(Math.max(o,cl)*(1+Math.random()*.004)).toFixed(2),l:+(Math.min(o,cl)*(1-Math.random()*.004)).toFixed(2),c:cl,v:Math.round(20+Math.random()*80)});p=o}return{price,trend:0,c}}
 let S={assets:{ACME:mk(100),MOON:mk(42),BYTE:mk(250)},players:{},auto:false};
 try{S=JSON.parse(fs.readFileSync(FILE))}catch(e){}
-S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};S.startCash=S.startCash||10000;
+S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};if(!S.v2){S.startCash=5;S.v2=1}S.startCash=S.startCash??5;
 for(const k in S.assets){const a=S.assets[k];if(!a.c)a.c=mk(a.price).c;a.trend=a.trend||0;delete a.hist}
 const save=()=>{try{fs.writeFileSync(FILE,JSON.stringify(S))}catch(e){}};
 const push=(k,p,v=0)=>{const a=S.assets[k],t=bk(),l=a.c[a.c.length-1];p=+p.toFixed(2);const o=l?l.c:p;
  if(l&&l.t===t){l.h=Math.max(l.h,p);l.l=Math.min(l.l,p);l.c=p;l.v+=v}else a.c.push({t,o,h:Math.max(o,p),l:Math.min(o,p),c:p,v});
  a.c=a.c.slice(-N);a.price=p};
 setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.01,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}save()},2000);
+const hp=(pw,salt)=>crypto.scryptSync(pw,salt,32);
+const mkpw=pw=>{const salt=crypto.randomBytes(8).toString('hex');return{salt,hash:hp(pw,salt).toString('hex')}};
+const okpw=(p,pw)=>!!(p.hash&&p.salt&&crypto.timingSafeEqual(hp(pw,p.salt),Buffer.from(p.hash,'hex')));
+const uname=u=>String(u||'').toLowerCase().trim(),UOK=/^[a-z0-9_]{3,20}$/,taken=u=>Object.values(S.players).some(p=>p.user===u);
+const fails={},locked=u=>fails[u]&&fails[u].n>=8&&Date.now()-fails[u].t<6e5;
+const bad=u=>{const f=fails[u];fails[u]=f&&Date.now()-f.t<6e5?{n:f.n+1,t:Date.now()}:{n:1,t:Date.now()}};
 const svTot=id=>+S.sv.log.filter(e=>e.pid===id).reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2);
 const who=req=>{const p=S.players[req.headers['x-id']];return p&&p.t===req.headers['x-token']?req.headers['x-id']:null};
-const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id)});
-const pub=(adm,id)=>({assets:S.assets,auto:S.auto,players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||''});
+const pub=(adm,id)=>({assets:S.assets,auto:S.auto,startCash:S.startCash,players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 http.createServer((req,res)=>{
  if(req.method==='GET'&&req.url.split('?')[0]==='/'){res.writeHead(200,{'content-type':'text/html'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res)}
@@ -23,13 +29,28 @@ http.createServer((req,res)=>{
  let raw='';req.on('data',d=>{raw+=d;if(raw.length>1e4)req.destroy()});
  req.on('end',()=>{let b={};try{b=JSON.parse(raw||'{}')}catch(e){}
   const r=req.url.replace('/api/',''),adm=req.headers['x-admin']===KEY,a=S.assets[b.sym];
-  if(r==='join'){const name=String(b.name||'').trim().slice(0,20);if(!name)return send(res,{error:'Name needed'},400);
-   const id=crypto.randomBytes(5).toString('hex'),t=crypto.randomBytes(12).toString('hex');S.players[id]={name,cash:S.startCash,pos:{},t};save();return send(res,{id,token:t})}
-  if(r==='trade'){const p=S.players[b.id],n=Math.floor(+b.qty);
-   if(!p||p.t!==b.token)return send(res,{error:'Rejoin the room'},403);if(!a||!(n>0))return send(res,{error:'Bad order'},400);
-   const cost=n*a.price;
-   if(b.side==='buy'){if(cost>p.cash)return send(res,{error:'Not enough cash'});p.cash=+(p.cash-cost).toFixed(2);p.pos[b.sym]=(p.pos[b.sym]||0)+n}
-   else{if((p.pos[b.sym]||0)<n)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(2);p.pos[b.sym]-=n;if(!p.pos[b.sym])delete p.pos[b.sym]}
+  if(r==='register'){const u=uname(b.username),pw=String(b.password||'');
+   if(!UOK.test(u))return send(res,{error:'Username: 3 to 20 letters, numbers or _'});
+   if(pw.length<6||pw.length>100)return send(res,{error:'Password needs 6 or more characters'});
+   if(taken(u))return send(res,{error:'That username is taken'});
+   if(Object.keys(S.players).length>=100)return send(res,{error:'The room is full'});
+   const id=crypto.randomBytes(5).toString('hex'),t=crypto.randomBytes(12).toString('hex');
+   S.players[id]={name:u,user:u,...mkpw(pw),cash:S.startCash,pos:{},t};save();return send(res,{id,token:t})}
+  if(r==='login'){const u=uname(b.username);if(locked(u))return send(res,{error:'Too many tries. Wait 10 minutes.'});
+   const e=Object.entries(S.players).find(([i,p])=>p.user===u);
+   if(!e||!okpw(e[1],String(b.password||''))){bad(u);return send(res,{error:'Wrong username or password'})}
+   delete fails[u];return send(res,{id:e[0],token:e[1].t})}
+  if(r==='setlogin'){const p=S.players[b.id],u=uname(b.username),pw=String(b.password||'');
+   if(!p||p.t!==b.token)return send(res,{error:'Please sign in again'},403);if(p.user)return send(res,{error:'You already have a login'});
+   if(!UOK.test(u))return send(res,{error:'Username: 3 to 20 letters, numbers or _'});
+   if(pw.length<6||pw.length>100)return send(res,{error:'Password needs 6 or more characters'});
+   if(taken(u))return send(res,{error:'That username is taken'});
+   Object.assign(p,{user:u},mkpw(pw));save();return send(res,{ok:1})}
+  if(r==='trade'){const p=S.players[b.id],n=+(+b.qty).toFixed(4);
+   if(!p||p.t!==b.token)return send(res,{error:'Please sign in again'},403);if(!a||!(n>0))return send(res,{error:'Bad order'},400);
+   const cost=n*a.price;if(cost<0.01&&!(b.side==='sell'&&n>=(p.pos[b.sym]||0)-1e-9))return send(res,{error:'Minimum order is $0.01'});
+   if(b.side==='buy'){if(cost>p.cash+1e-9)return send(res,{error:'Not enough cash'});p.cash=Math.max(0,+(p.cash-cost).toFixed(4));p.pos[b.sym]=+((p.pos[b.sym]||0)+n).toFixed(4)}
+   else{if((p.pos[b.sym]||0)<n-1e-9)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(4);p.pos[b.sym]=+((p.pos[b.sym]||0)-n).toFixed(4);if(p.pos[b.sym]<=0)delete p.pos[b.sym]}
    a.c[a.c.length-1].v+=n;save();return send(res,{ok:1})}
   if(!adm)return send(res,{error:'Host only'},403);
   if(r==='price'&&a&&+b.price>0)push(b.sym,+b.price);
@@ -46,6 +67,10 @@ http.createServer((req,res)=>{
    S.sv.log.push({lid:crypto.randomBytes(4).toString('hex'),pid:b.id,name:p.name,type:r==='sdeposit'?'deposit':'withdraw',amt:+amt.toFixed(2),code:String(b.code||'').slice(0,20),t:Date.now()})}
   else if(r==='sdel')S.sv.log=S.sv.log.filter(e=>e.lid!==b.lid);
   else if(r==='topup'&&S.players[b.id]&&+b.amt>0)S.players[b.id].cash=+(S.players[b.id].cash+ +b.amt).toFixed(2);
+  else if(r==='startcash'&&+b.amt>=0&&+b.amt<=1e6)S.startCash=+(+b.amt).toFixed(2);
+  else if(r==='resetpw'){const p=S.players[b.id],pw=String(b.password||'');if(!p)return send(res,{error:'No such player'});if(pw.length<6)return send(res,{error:'Password needs 6 or more characters'});
+   if(!p.user){const u=uname(b.username);if(!UOK.test(u)||taken(u))return send(res,{error:'Pick a free username (3 to 20 letters, numbers or _)'});p.user=u}
+   Object.assign(p,mkpw(pw));p.t=crypto.randomBytes(12).toString('hex');delete fails[p.user]}
   else if(r==='auto')S.auto=!!b.on;
   save();send(res,{ok:1})})
 }).listen(PORT,()=>console.log('Trading Room on port '+PORT));
