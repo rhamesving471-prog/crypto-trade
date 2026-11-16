@@ -14,7 +14,7 @@ a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:va
 <div id="join" class="card" hidden><h2 id="ah">Sign in</h2><div class="row"><input id="un" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" type="password" placeholder="Password (6+ characters)"><button class="p" id="jb">Sign in</button></div><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
 <div id="claim" class="card" hidden><h2>Create your login</h2><div class="mu">Pick a username and password so you can sign back in from any phone. Your balance stays.</div><div class="row" style="margin-top:8px"><input id="cu" placeholder="Username" maxlength="20" autocapitalize="none"><input id="cp" type="password" placeholder="Password (6+ characters)"><button class="p" id="cb">Save login</button><span id="cmsg" class="dn"></span></div></div>
 <div class="card"><div class="row" id="tabs"></div><div class="row sp" style="margin-top:10px"><div><div class="big" id="px"></div><div id="chg"></div></div><div class="mu" id="eq" style="text-align:right"></div></div><div id="chart"></div></div>
-<div class="card" id="trade" hidden><h2>Trade</h2><div class="row"><input id="qty" type="number" min="0.0001" step="any" value="0.01"><button id="mx">Max buy</button><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><span id="tm" class="mu"></span></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
+<div class="card" id="trade" hidden><h2>Trade</h2><div class="row"><input id="qty" type="number" min="0.00000001" step="any" placeholder="Quantity"><button id="mx">Max buy</button><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><span id="tm" class="mu"></span></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
 <div class="card" id="sv" hidden><h2>Holiday savings</h2><div class="row sp"><div><div class="mu">Your locked savings</div><div class="big" id="svt">KES 0.00</div></div><div style="text-align:right"><div class="mu">Withdrawals open in</div><div id="cd" style="font-weight:600"></div></div></div><div id="dep" style="margin-top:10px"></div><div class="sc" style="margin-top:8px"><table id="svl"></table></div></div>
 <div class="card" id="lbcard" hidden><h2>Leaderboard (host only)</h2><div class="sc"><table id="lb"></table></div></div>
 <div class="card" id="admin" hidden><h2>Host controls</h2>
@@ -30,7 +30,7 @@ a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:va
 const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
 if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',location.pathname)}
 let S=null,sel=null,me=JSON.parse(localStorage.me||'null'),host=false;
-const m=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}),f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const m=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}),pf=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:n>=10?2:4,maximumFractionDigits:n>=10?2:4}),f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||'','x-id':me?me.id:'','x-token':me?me.token:''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
 async function load(){const s=await api('state');if(s.assets){S=s;host=s.admin;render();renderSv()}}
 const eq=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
@@ -40,9 +40,9 @@ function render(){
  $('#join').hidden=!!me;$('#trade').hidden=!me;$('#admin').hidden=!host;$('#who').textContent=(host?'Host · ':'')+(me?S.players[me.id].name:'');
  $('#tabs').innerHTML=keys.map(k=>'<button data-k="'+k+'" class="'+(k===sel?'on':'')+'">'+k+'</button>').join('');
  const a=S.assets[sel],c=a.c,ch=(a.price-c[0].o)/c[0].o*100;
- $('#px').textContent='$'+f(a.price);$('#chg').innerHTML='<span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span> <span class="mu">over the last 10 min · H '+f(Math.max(...c.map(x=>x.h)))+' · L '+f(Math.min(...c.map(x=>x.l)))+'</span>';
+ $('#px').textContent='$'+pf(a.price);$('#chg').innerHTML='<span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span> <span class="mu">over the last 10 min · H '+pf(Math.max(...c.map(x=>x.h)))+' · L '+pf(Math.min(...c.map(x=>x.l)))+'</span>';
  chart(c);
- if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>Total $'+m(eq(p));$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(4))+' × '+sel}else $('#eq').textContent='';
+ if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>Total $'+m(eq(p));$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel}else $('#eq').textContent='';
  const rows=Object.entries(S.players).map(([id,p])=>({id,p,e:eq(p)})).sort((x,y)=>y.e-x.e);
  $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash</th><th>Total</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>$'+m(r.p.cash)+'</td><td>$'+m(r.e)+'</td></tr>').join('');
  $('#lnk').textContent=location.origin;
@@ -51,11 +51,11 @@ function render(){
 function chart(c){const W=800,H=330,pr=58,ph=240,vy=262,vh=60,n=c.length,pw=W-pr;
  let mn=Math.min(...c.map(x=>x.l)),mx=Math.max(...c.map(x=>x.h));const pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
  const Y=v=>10+(mx-v)/(mx-mn)*ph,cw=pw/n,vm=Math.max(...c.map(x=>x.v))||1;let s='';
- for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,y=Y(v);s+='<line x1="0" x2="'+pw+'" y1="'+y+'" y2="'+y+'" stroke="var(--bd)"/><text x="'+(W-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="var(--mu)">'+f(v)+'</text>'}
+ for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,y=Y(v);s+='<line x1="0" x2="'+pw+'" y1="'+y+'" y2="'+y+'" stroke="var(--bd)"/><text x="'+(W-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="var(--mu)">'+pf(v)+'</text>'}
  c.forEach((x,i)=>{const col=x.c>=x.o?'var(--up)':'var(--dn)',cx=i*cw+cw/2,bw=Math.max(1,cw*.7),yo=Y(x.o),yc=Y(x.c),h=x.v/vm*vh;
   s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+Math.min(yo,yc)+'" width="'+bw+'" height="'+Math.max(1,Math.abs(yo-yc))+'" fill="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+(vy+vh-h)+'" width="'+bw+'" height="'+h+'" fill="'+col+'" opacity=".4"/>'});
  const l=c[n-1],ly=Y(l.c),lc=l.c>=l.o?'var(--up)':'var(--dn)';
- s+='<line x1="0" x2="'+pw+'" y1="'+ly+'" y2="'+ly+'" stroke="'+lc+'" stroke-dasharray="4 3"/><rect x="'+pw+'" y="'+(ly-9)+'" width="'+pr+'" height="18" fill="'+lc+'"/><text x="'+(W-4)+'" y="'+(ly+4)+'" text-anchor="end" font-size="11" fill="#fff">'+f(l.c)+'</text>';
+ s+='<line x1="0" x2="'+pw+'" y1="'+ly+'" y2="'+ly+'" stroke="'+lc+'" stroke-dasharray="4 3"/><rect x="'+pw+'" y="'+(ly-9)+'" width="'+pr+'" height="18" fill="'+lc+'"/><text x="'+(W-4)+'" y="'+(ly+4)+'" text-anchor="end" font-size="11" fill="#fff">'+pf(l.c)+'</text>';
  $('#chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg>'}
 let reg=false;
 function authUi(){$('#ah').textContent=reg?'Create account · you start with $'+m(S.startCash):'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
@@ -84,8 +84,8 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='jb'){const r=await api(reg?'register':'login',{username:$('#un').value,password:$('#pw').value});if(r.id){me=r;localStorage.me=JSON.stringify(r);$('#pw').value='';$('#amsg').textContent='';load()}else $('#amsg').textContent=r.error||'Try again'}
  if(t.id==='cb'){const r=await api('setlogin',{id:me.id,token:me.token,username:$('#cu').value,password:$('#cp').value});$('#cmsg').textContent=r.error||'';if(!r.error){$('#cp').value='';load()}}
  if(t.id==='so'){localStorage.removeItem('me');me=null;load()}
- if(t.id==='mx'&&me&&S.players[me.id]){$('#qty').value=Math.floor(S.players[me.id].cash/S.assets[sel].price*1e4)/1e4}
- if(t.id==='buy'||t.id==='sell'){const r=await api('trade',{id:me.id,token:me.token,sym:sel,side:t.id,qty:$('#qty').value});$('#tm').textContent=r.error||'Done';load()}
+ if(t.id==='mx'&&me&&S.players[me.id]){$('#qty').value=Math.floor(S.players[me.id].cash/S.assets[sel].price*1e8)/1e8}
+ if(t.id==='buy'||t.id==='sell'){if(!(+$('#qty').value>0)){$('#tm').textContent='Enter a quantity, or tap Max buy';return}const r=await api('trade',{id:me.id,token:me.token,sym:sel,side:t.id,qty:$('#qty').value});$('#tm').textContent=r.error||'Done';load()}
  if(!host)return;
  if(t.id==='setp')act('price',{sym:sel,price:$('#np').value});
  if(d.t!==undefined)act('trend',{sym:sel,pct:+d.t});
