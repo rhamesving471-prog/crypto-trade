@@ -1,14 +1,15 @@
 const http=require('http'),fs=require('fs'),crypto=require('crypto'),path=require('path');
-const PORT=process.env.PORT||3000,KEY=process.env.ADMIN_KEY||crypto.randomBytes(6).toString('hex'),FILE=path.join(__dirname,'state.json'),B=10000,N=60;
+const PORT=process.env.PORT||3000,KEY=process.env.ADMIN_KEY||crypto.randomBytes(6).toString('hex'),FILE=path.join(__dirname,'state.json'),B=10000,N=240;
 const bk=()=>Math.floor(Date.now()/B)*B;
 const rd=p=>+p.toFixed(p>=10?2:4);
 const COINS={BTC:65000,ETH:3200,SOL:150,BNB:600,XRP:0.55,ADA:0.45,AVAX:35,DOT:7,LTC:80};
-function mk(price){let p=price,c=[];const t=bk();for(let i=0;i<N;i++){const cl=p,o=rd(cl/(1+(Math.random()-.5)*.012));c.unshift({t:t-i*B,o,h:rd(Math.max(o,cl)*(1+Math.random()*.004)),l:rd(Math.min(o,cl)*(1-Math.random()*.004)),c:cl,v:Math.round(20+Math.random()*80)});p=o}return{price,trend:0,c}}
+function mk(price,n=N,t0=bk()){let p=price,c=[];const t=t0;for(let i=0;i<n;i++){const cl=p,o=rd(cl/(1+(Math.random()-.5)*.012));c.unshift({t:t-i*B,o,h:rd(Math.max(o,cl)*(1+Math.random()*.004)),l:rd(Math.min(o,cl)*(1-Math.random()*.004)),c:cl,v:Math.round(20+Math.random()*80)});p=o}return{price,trend:0,c}}
 let S={assets:Object.fromEntries(Object.entries(COINS).map(([k,v])=>[k,mk(v)])),players:{},auto:false};
 try{S=JSON.parse(fs.readFileSync(FILE))}catch(e){}
 S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};S.round=S.round||{end:0,done:false,winner:null};
 if(!S.v2){S.startCash=5;S.v2=1}S.startCash=S.startCash??5;
-for(const k in S.assets){const a=S.assets[k];if(!a.c)a.c=mk(a.price).c;a.trend=a.trend||0;delete a.hist}
+for(const k in S.assets){const a=S.assets[k];if(!a.c)a.c=mk(a.price).c;a.trend=a.trend||0;delete a.hist;if(a.c.length<N)a.c=mk(a.c[0].o,N-a.c.length,a.c[0].t-B).c.concat(a.c)}
+S.tape=S.tape||[];
 if(!S.v3){for(const o of ['ACME','MOON','BYTE']){const a=S.assets[o];if(!a)continue;for(const p of Object.values(S.players)){const q=p.pos&&p.pos[o];if(q){p.cash=+(p.cash+q*a.price).toFixed(4);delete p.pos[o]}}delete S.assets[o]}
  for(const k in COINS)if(!S.assets[k])S.assets[k]=mk(COINS[k]);S.v3=1}
 const eqOf=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
@@ -27,11 +28,13 @@ const bad=u=>{const f=fails[u];fails[u]=f&&Date.now()-f.t<6e5?{n:f.n+1,t:Date.no
 const svTot=id=>+S.sv.log.filter(e=>e.pid===id).reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2);
 const who=req=>{const p=S.players[req.headers['x-id']];return p&&p.t===req.headers['x-token']?req.headers['x-id']:null};
 const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||'',avg:p.avg||{}});
-const pub=(adm,id)=>({assets:S.assets,auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,k===sym?a:{price:a.price,trend:a.trend,c:a.c.slice(-1)}])),auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const zlib=require('zlib');
+const sendz=(req,res,o)=>{const b=Buffer.from(JSON.stringify(o));if(/gzip/.test(req.headers['accept-encoding']||'')){res.writeHead(200,{'content-type':'application/json','content-encoding':'gzip'});res.end(zlib.gzipSync(b))}else{res.writeHead(200,{'content-type':'application/json'});res.end(b)}};
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 http.createServer((req,res)=>{
  if(req.method==='GET'&&req.url.split('?')[0]==='/'){res.writeHead(200,{'content-type':'text/html'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res)}
- if(req.method==='GET'&&req.url==='/api/state'){const adm=req.headers['x-admin']===KEY;return send(res,{...pub(adm,who(req)),admin:adm})};
+ if(req.method==='GET'&&req.url.startsWith('/api/state')){const adm=req.headers['x-admin']===KEY;return sendz(req,res,{...pub(adm,who(req),new URL(req.url,'http://x').searchParams.get('sym')),admin:adm})};
  if(req.method!=='POST')return send(res,{error:'not found'},404);
  let raw='';req.on('data',d=>{raw+=d;if(raw.length>1e4)req.destroy()});
  req.on('end',()=>{let b={};try{b=JSON.parse(raw||'{}')}catch(e){}
@@ -58,7 +61,7 @@ http.createServer((req,res)=>{
    const cost=n*a.price;if(cost<0.01&&!(b.side==='sell'&&n>=(p.pos[b.sym]||0)-1e-9))return send(res,{error:'Minimum order is $0.01'});
    if(b.side==='buy'){if(cost>p.cash+1e-9)return send(res,{error:'Not enough cash'});p.cash=Math.max(0,+(p.cash-cost).toFixed(4));{const q0=p.pos[b.sym]||0;p.avg=p.avg||{};const a0=p.avg[b.sym]||a.price;p.avg[b.sym]=+((q0*a0+n*a.price)/(q0+n)).toPrecision(8)}p.pos[b.sym]=+((p.pos[b.sym]||0)+n).toFixed(8)}
    else{if((p.pos[b.sym]||0)<n-1e-9)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(4);p.pos[b.sym]=+((p.pos[b.sym]||0)-n).toFixed(8);if(p.pos[b.sym]<=0){delete p.pos[b.sym];if(p.avg)delete p.avg[b.sym]}}
-   a.c[a.c.length-1].v+=n;save();return send(res,{ok:1})}
+   a.c[a.c.length-1].v+=n;S.tape.push({t:Date.now(),sym:b.sym,side:b.side,price:a.price,qty:n});S.tape=S.tape.slice(-80);save();return send(res,{ok:1})}
   if(!adm)return send(res,{error:'Host only'},403);
   if(r==='price'&&a&&+b.price>0)push(b.sym,+b.price);
   else if(r==='nudge'&&a)push(b.sym,Math.max(.0001,a.price*(1+b.pct/100)),30);
