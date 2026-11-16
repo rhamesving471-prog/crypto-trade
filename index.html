@@ -45,12 +45,12 @@ function render(){
  $('#join').hidden=!!me;$('#trade').hidden=!me;$('#admin').hidden=!host;$('#who').textContent=(host?'Host · ':'')+(me?S.players[me.id].name:'');
  $('#tabs').innerHTML=keys.map(k=>'<button data-k="'+k+'" class="'+(k===sel?'on':'')+'">'+k+'</button>').join('');
  const a=S.assets[sel],c=a.c;if(c.length<10){if(!ld){ld=1;load().then(()=>ld=0)}return}const ch=(a.price-c[0].o)/c[0].o*100;
- $('#px').textContent='$'+pf(a.price);$('#chg').innerHTML='<span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span>';
+ const pp=me&&S.players[me.id];$('#px').innerHTML=pp?'<span class="mu" style="font-size:12px;font-weight:400;display:block">Your balance</span>$'+m(eq(pp)):'<span class="mu" style="font-size:16px;font-weight:400">Sign in to see your balance</span>';$('#chg').innerHTML='<span class="mu">'+sel+' </span><span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span>';
  const hi=Math.max(...c.map(x=>x.h)),lo=Math.min(...c.map(x=>x.l)),vo=c.reduce((q,x)=>q+x.v,0);
  $('#st').innerHTML='<div><span>High</span>'+pf(hi)+'</div><div><span>Low</span>'+pf(lo)+'</div><div><span>Volume</span>'+Math.round(vo).toLocaleString()+'</div><div><span>History</span>'+Math.round(c.length/6)+' min</div>';
  $('#tf').innerHTML=TFS.map(([q,l])=>'<button data-tf="'+q+'" class="'+(q===tf?'on':'')+'">'+l+'</button>').join('');
  drawChart();$('#ob').innerHTML=book(a.price);$('#tp').innerHTML=tape();
- if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>Total $'+m(eq(p));$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel+(p.avg&&p.avg[sel]?' · entry $'+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+'$'+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0))):'')}else $('#eq').textContent='';
+ if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>In coins $'+m(eq(p)-p.cash);$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel+(p.avg&&p.avg[sel]?' · entry $'+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+'$'+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0))):'')}else $('#eq').textContent='';
  const rows=Object.entries(S.players).map(([id,p])=>({id,p,e:eq(p)})).sort((x,y)=>y.e-x.e);
  $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash</th><th>Total</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>$'+m(r.p.cash)+'</td><td>$'+m(r.e)+'</td></tr>').join('');
  $('#lnk').textContent=location.origin;
