@@ -5,7 +5,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif}main{max-width:760px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:0}h2{font-size:14px;margin:0 0 10px;color:var(--mu);text-transform:uppercase}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-top:12px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
-button,input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 12px}button{cursor:pointer}
+button,input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 12px}button{cursor:pointer}
 .p{background:var(--ac);color:#fff}.b{background:var(--up);color:#fff}.s{background:var(--dn);color:#fff}input{width:110px}.on{border-color:var(--ac)!important;color:var(--ac);font-weight:600}
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mu)}.big{font-size:28px;font-weight:700}.sc{overflow-x:auto}table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu);font-weight:500;font-size:13px}svg{width:100%;height:auto;display:block}
 </style></head><body><main>
@@ -14,19 +14,24 @@ button,input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid 
 <div id="join" class="card" hidden><h2>Join</h2><div class="row"><input id="nm" placeholder="Your name" maxlength="20"><button class="p" id="jb">Start with $10,000</button></div></div>
 <div class="card"><div class="row" id="tabs"></div><div class="row sp" style="margin-top:10px"><div><div class="big" id="px"></div><div id="chg"></div></div><div class="mu" id="eq" style="text-align:right"></div></div><div id="chart"></div></div>
 <div class="card" id="trade" hidden><h2>Trade</h2><div class="row"><input id="qty" type="number" min="1" value="1"><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><span id="tm" class="mu"></span></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
-<div class="card"><h2>Leaderboard</h2><div class="sc"><table id="lb"></table></div></div>
+<div class="card" id="sv" hidden><h2>Holiday savings</h2><div class="row sp"><div><div class="mu">Your locked savings</div><div class="big" id="svt">KES 0.00</div></div><div style="text-align:right"><div class="mu">Withdrawals open in</div><div id="cd" style="font-weight:600"></div></div></div><div id="dep" style="margin-top:10px"></div><div class="sc" style="margin-top:8px"><table id="svl"></table></div></div>
+<div class="card" id="lbcard" hidden><h2>Leaderboard (host only)</h2><div class="sc"><table id="lb"></table></div></div>
 <div class="card" id="admin" hidden><h2>Host controls</h2>
 <div class="row"><input id="np" type="number" step="any"><button class="p" id="setp">Set price</button><button data-n="-10">−10%</button><button data-n="-5">−5%</button><button data-n="5">+5%</button><button data-n="10">+10%</button></div>
 <h2 style="margin:14px 0 8px">Steer the trend <span id="tr" class="mu"></span></h2><div class="row"><button class="b" data-t="1">🚀 Pump hard</button><button class="b" data-t="0.3">▲ Pump</button><button data-t="0">■ Hold</button><button class="s" data-t="-0.3">▼ Dump</button><button class="s" data-t="-1">💥 Crash</button></div>
 <div class="row" style="margin-top:10px"><button id="auto"></button><input id="ns" placeholder="Ticker" maxlength="6"><input id="nsp" type="number" placeholder="Price"><button id="adds">Add asset</button><button id="dels">Remove this asset</button></div>
-<h2 style="margin-top:16px">Players</h2><div class="sc"><table id="pl"></table></div></div>
+<h2 style="margin-top:16px">Savings records</h2>
+<div class="row"><input id="snum" placeholder="Deposit number" style="width:150px"><input id="sdate" type="date" style="width:150px"><button id="ssave">Save number &amp; date</button></div>
+<div class="row" style="margin-top:8px"><select id="spl"></select><input id="samt" type="number" placeholder="Amount KES"><input id="scode" placeholder="M-Pesa code" maxlength="20"><button class="b" id="sdep">Record deposit</button><button class="s" id="swd">Record withdrawal</button></div>
+<div id="smsg" class="mu" style="margin-top:6px"></div><div class="mu" id="stot" style="margin:8px 0"></div><div class="sc"><table id="sall"></table></div>
+<h2 style="margin-top:16px">Players (play money)</h2><div class="sc"><table id="pl"></table></div></div>
 </main><script>
 const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
 if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',location.pathname)}
 let S=null,sel=null,me=JSON.parse(localStorage.me||'null'),host=false;
 const f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
-async function load(){const s=await api('state');if(s.assets){S=s;host=s.admin;render()}}
+async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||'','x-id':me?me.id:'','x-token':me?me.token:''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
+async function load(){const s=await api('state');if(s.assets){S=s;host=s.admin;render();renderSv()}}
 const eq=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
 function render(){
  if(me&&!S.players[me.id]){me=null;localStorage.removeItem('me')}
@@ -41,7 +46,7 @@ function render(){
  $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash</th><th>Total</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>$'+f(r.p.cash)+'</td><td>$'+f(r.e)+'</td></tr>').join('');
  $('#lnk').textContent=location.origin;
  if(host){$('#tr').textContent=a.trend?'(now '+(a.trend>0?'+':'')+a.trend+'% per 2s)':'(holding)';$('#auto').textContent='Random wiggle: '+(S.auto?'on':'off');if(document.activeElement.id!=='np')$('#np').value=a.price;
-  if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+'</td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
+  if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+'</td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-u="'+r.id+'">+10,000 play</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
 function chart(c){const W=800,H=330,pr=58,ph=240,vy=262,vh=60,n=c.length,pw=W-pr;
  let mn=Math.min(...c.map(x=>x.l)),mx=Math.max(...c.map(x=>x.h));const pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
  const Y=v=>10+(mx-v)/(mx-mn)*ph,cw=pw/n,vm=Math.max(...c.map(x=>x.v))||1;let s='';
@@ -51,10 +56,27 @@ function chart(c){const W=800,H=330,pr=58,ph=240,vy=262,vh=60,n=c.length,pw=W-pr
  const l=c[n-1],ly=Y(l.c),lc=l.c>=l.o?'var(--up)':'var(--dn)';
  s+='<line x1="0" x2="'+pw+'" y1="'+ly+'" y2="'+ly+'" stroke="'+lc+'" stroke-dasharray="4 3"/><rect x="'+pw+'" y="'+(ly-9)+'" width="'+pr+'" height="18" fill="'+lc+'"/><text x="'+(W-4)+'" y="'+(ly+4)+'" text-anchor="end" font-size="11" fill="#fff">'+f(l.c)+'</text>';
  $('#chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg>'}
+const K=n=>'KES '+f(n);
+function cdText(){const ms=new Date(S.savings.date+'T00:00:00+03:00')-Date.now();if(isNaN(ms))return '';if(ms<=0)return 'Open now 🎉 ('+S.savings.date+')';return Math.floor(ms/864e5)+' days '+Math.floor(ms%864e5/36e5)+' h · '+S.savings.date}
+function renderSv(){
+ const v=S.savings,id=me&&me.id,p=id&&S.players[id];
+ $('#lbcard').hidden=!host;$('#sv').hidden=!(me||host);$('#svt').parentElement.hidden=!me;
+ $('#svt').textContent=K(p?p.saved:0);$('#cd').textContent=cdText();
+ $('#dep').innerHTML=v.number?'<div class="row"><span class="mu">Send your savings to:</span><b>'+esc(v.number)+'</b><button id="cpn">Copy number</button></div><div class="mu" style="margin-top:6px">After you send, give the host your M-Pesa code. It counts as saved once the host records it. Savings never go into the game.</div>':'<div class="mu">The host hasn’t added a deposit number yet.</div>';
+ $('#svl').innerHTML='<tr><th>Date</th><th>Player</th><th>Type</th><th>Amount</th><th>Code</th>'+(host?'<th></th>':'')+'</tr>'+(v.log||[]).slice().reverse().map(e=>'<tr><td>'+new Date(e.t).toLocaleDateString()+'</td><td>'+esc(e.name)+'</td><td>'+e.type+'</td><td>'+K(e.amt)+'</td><td>'+esc(e.code||'')+'</td>'+(host?'<td><button data-sd="'+e.lid+'">Delete</button></td>':'')+'</tr>').join('');
+ if(!host)return;
+ const ae=document.activeElement.id;
+ if(ae!=='snum')$('#snum').value=v.number||'';
+ if(ae!=='sdate')$('#sdate').value=v.date;
+ const ops=Object.entries(S.players).map(([i,q])=>'<option value="'+i+'">'+esc(q.name)+'</option>').join('');
+ if($('#spl').dataset.h!==ops){const cur=$('#spl').value;$('#spl').innerHTML=ops;$('#spl').dataset.h=ops;if(cur)$('#spl').value=cur}
+ $('#stot').textContent='Group total locked: '+K(v.total||0);
+ $('#sall').innerHTML='<tr><th>Player</th><th>Saved</th></tr>'+Object.values(S.players).map(q=>'<tr><td>'+esc(q.name)+'</td><td>'+K(q.saved)+'</td></tr>').join('')}
 async function act(p,b){await api(p,b);load()}
 document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(d.k){sel=d.k;render()}
  if(t.id==='cp'){try{await navigator.clipboard.writeText(location.origin);t.textContent='Copied!'}catch(x){t.textContent='Copy it from the address bar'}setTimeout(()=>t.textContent='Copy link',2000)}
+ if(t.id==='cpn'){try{await navigator.clipboard.writeText(S.savings.number);t.textContent='Copied!'}catch(x){t.textContent='Copy it by hand'}setTimeout(()=>t.textContent='Copy number',2000)}
  if(t.id==='jb'){const r=await api('join',{name:$('#nm').value});if(r.id){me=r;localStorage.me=JSON.stringify(r);load()}}
  if(t.id==='buy'||t.id==='sell'){const r=await api('trade',{id:me.id,token:me.token,sym:sel,side:t.id,qty:$('#qty').value});$('#tm').textContent=r.error||'Done';load()}
  if(!host)return;
@@ -65,6 +87,9 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='adds'){act('add',{sym:$('#ns').value,price:$('#nsp').value});$('#ns').value=''}
  if(t.id==='dels')act('del',{sym:sel});
  if(d.c)act('cash',{id:d.c,cash:$('#c_'+d.c).value});
- if(d.r)act('clear',{id:d.r});if(d.x)act('kick',{id:d.x})});
+ if(d.r)act('clear',{id:d.r});if(d.u)act('topup',{id:d.u,amt:10000});if(d.sd)act('sdel',{lid:d.sd});
+ if(t.id==='ssave')act('savecfg',{number:$('#snum').value,date:$('#sdate').value});
+ if(t.id==='sdep'||t.id==='swd'){const r=await api(t.id==='sdep'?'sdeposit':'swithdraw',{id:$('#spl').value,amt:$('#samt').value,code:$('#scode').value});$('#smsg').textContent=r.error||'Recorded';if(!r.error){$('#samt').value='';$('#scode').value=''}load()}
+ if(d.x)act('kick',{id:d.x})});
 load();setInterval(load,2000);
 </script></body></html>
