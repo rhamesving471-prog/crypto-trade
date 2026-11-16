@@ -6,15 +6,18 @@ const COINS={BTC:65000,ETH:3200,SOL:150,BNB:600,XRP:0.55,ADA:0.45,AVAX:35,DOT:7,
 function mk(price){let p=price,c=[];const t=bk();for(let i=0;i<N;i++){const cl=p,o=rd(cl/(1+(Math.random()-.5)*.012));c.unshift({t:t-i*B,o,h:rd(Math.max(o,cl)*(1+Math.random()*.004)),l:rd(Math.min(o,cl)*(1-Math.random()*.004)),c:cl,v:Math.round(20+Math.random()*80)});p=o}return{price,trend:0,c}}
 let S={assets:Object.fromEntries(Object.entries(COINS).map(([k,v])=>[k,mk(v)])),players:{},auto:false};
 try{S=JSON.parse(fs.readFileSync(FILE))}catch(e){}
-S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};if(!S.v2){S.startCash=5;S.v2=1}S.startCash=S.startCash??5;
+S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};S.round=S.round||{end:0,done:false,winner:null};
+if(!S.v2){S.startCash=5;S.v2=1}S.startCash=S.startCash??5;
 for(const k in S.assets){const a=S.assets[k];if(!a.c)a.c=mk(a.price).c;a.trend=a.trend||0;delete a.hist}
 if(!S.v3){for(const o of ['ACME','MOON','BYTE']){const a=S.assets[o];if(!a)continue;for(const p of Object.values(S.players)){const q=p.pos&&p.pos[o];if(q){p.cash=+(p.cash+q*a.price).toFixed(4);delete p.pos[o]}}delete S.assets[o]}
  for(const k in COINS)if(!S.assets[k])S.assets[k]=mk(COINS[k]);S.v3=1}
+const eqOf=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
+const finish=()=>{let best=null;for(const p of Object.values(S.players)){const e=eqOf(p);if(!best||e>best.eq)best={name:p.name,eq:+e.toFixed(4)}}S.round.done=true;S.round.winner=best};
 const save=()=>{try{fs.writeFileSync(FILE,JSON.stringify(S))}catch(e){}};
 const push=(k,p,v=0)=>{const a=S.assets[k],t=bk(),l=a.c[a.c.length-1];p=rd(p);const o=l?l.c:p;
  if(l&&l.t===t){l.h=Math.max(l.h,p);l.l=Math.min(l.l,p);l.c=p;l.v+=v}else a.c.push({t,o,h:Math.max(o,p),l:Math.min(o,p),c:p,v});
  a.c=a.c.slice(-N);a.price=p};
-setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}save()},2000);
+setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}if(S.round.end&&!S.round.done&&Date.now()>=S.round.end)finish();save()},2000);
 const hp=(pw,salt)=>crypto.scryptSync(pw,salt,32);
 const mkpw=pw=>{const salt=crypto.randomBytes(8).toString('hex');return{salt,hash:hp(pw,salt).toString('hex')}};
 const okpw=(p,pw)=>!!(p.hash&&p.salt&&crypto.timingSafeEqual(hp(pw,p.salt),Buffer.from(p.hash,'hex')));
@@ -23,8 +26,8 @@ const fails={},locked=u=>fails[u]&&fails[u].n>=8&&Date.now()-fails[u].t<6e5;
 const bad=u=>{const f=fails[u];fails[u]=f&&Date.now()-f.t<6e5?{n:f.n+1,t:Date.now()}:{n:1,t:Date.now()}};
 const svTot=id=>+S.sv.log.filter(e=>e.pid===id).reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2);
 const who=req=>{const p=S.players[req.headers['x-id']];return p&&p.t===req.headers['x-token']?req.headers['x-id']:null};
-const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||''});
-const pub=(adm,id)=>({assets:S.assets,auto:S.auto,startCash:S.startCash,players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||'',avg:p.avg||{}});
+const pub=(adm,id)=>({assets:S.assets,auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:S.sv.number,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 http.createServer((req,res)=>{
  if(req.method==='GET'&&req.url.split('?')[0]==='/'){res.writeHead(200,{'content-type':'text/html'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res)}
@@ -51,10 +54,10 @@ http.createServer((req,res)=>{
    if(taken(u))return send(res,{error:'That username is taken'});
    Object.assign(p,{user:u},mkpw(pw));save();return send(res,{ok:1})}
   if(r==='trade'){const p=S.players[b.id],n=+(+b.qty).toFixed(8);
-   if(!p||p.t!==b.token)return send(res,{error:'Please sign in again'},403);if(!a||!(n>0))return send(res,{error:'Bad order'},400);
+   if(!p||p.t!==b.token)return send(res,{error:'Please sign in again'},403);if(S.round.done)return send(res,{error:'The round is over'});if(!a||!(n>0))return send(res,{error:'Bad order'},400);
    const cost=n*a.price;if(cost<0.01&&!(b.side==='sell'&&n>=(p.pos[b.sym]||0)-1e-9))return send(res,{error:'Minimum order is $0.01'});
-   if(b.side==='buy'){if(cost>p.cash+1e-9)return send(res,{error:'Not enough cash'});p.cash=Math.max(0,+(p.cash-cost).toFixed(4));p.pos[b.sym]=+((p.pos[b.sym]||0)+n).toFixed(8)}
-   else{if((p.pos[b.sym]||0)<n-1e-9)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(4);p.pos[b.sym]=+((p.pos[b.sym]||0)-n).toFixed(8);if(p.pos[b.sym]<=0)delete p.pos[b.sym]}
+   if(b.side==='buy'){if(cost>p.cash+1e-9)return send(res,{error:'Not enough cash'});p.cash=Math.max(0,+(p.cash-cost).toFixed(4));{const q0=p.pos[b.sym]||0;p.avg=p.avg||{};const a0=p.avg[b.sym]||a.price;p.avg[b.sym]=+((q0*a0+n*a.price)/(q0+n)).toPrecision(8)}p.pos[b.sym]=+((p.pos[b.sym]||0)+n).toFixed(8)}
+   else{if((p.pos[b.sym]||0)<n-1e-9)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(4);p.pos[b.sym]=+((p.pos[b.sym]||0)-n).toFixed(8);if(p.pos[b.sym]<=0){delete p.pos[b.sym];if(p.avg)delete p.avg[b.sym]}}
    a.c[a.c.length-1].v+=n;save();return send(res,{ok:1})}
   if(!adm)return send(res,{error:'Host only'},403);
   if(r==='price'&&a&&+b.price>0)push(b.sym,+b.price);
@@ -63,7 +66,7 @@ http.createServer((req,res)=>{
   else if(r==='add'){const k=String(b.sym||'').toUpperCase().slice(0,6);if(k&&+b.price>0&&!S.assets[k])S.assets[k]=mk(+b.price)}
   else if(r==='del'&&a&&Object.keys(S.assets).length>1)delete S.assets[b.sym];
   else if(r==='cash'&&S.players[b.id])S.players[b.id].cash=+b.cash||0;
-  else if(r==='clear'&&S.players[b.id])S.players[b.id].pos={};
+  else if(r==='clear'&&S.players[b.id]){S.players[b.id].pos={};S.players[b.id].avg={}}
   else if(r==='kick')delete S.players[b.id];
   else if(r==='savecfg'){S.sv.number=String(b.number||'').slice(0,40);if(/^\d{4}-\d{2}-\d{2}$/.test(b.date||''))S.sv.date=b.date}
   else if(r==='sdeposit'||r==='swithdraw'){const p=S.players[b.id],amt=+b.amt;if(!p||!(amt>0)||amt>1e9)return send(res,{error:'Pick a player and enter an amount'});
@@ -75,6 +78,9 @@ http.createServer((req,res)=>{
   else if(r==='resetpw'){const p=S.players[b.id],pw=String(b.password||'');if(!p)return send(res,{error:'No such player'});if(pw.length<6)return send(res,{error:'Password needs 6 or more characters'});
    if(!p.user){const u=uname(b.username);if(!UOK.test(u)||taken(u))return send(res,{error:'Pick a free username (3 to 20 letters, numbers or _)'});p.user=u}
    Object.assign(p,mkpw(pw));p.t=crypto.randomBytes(12).toString('hex');delete fails[p.user]}
+  else if(r==='roundstart')S.round={end:Date.now()+Math.min(1440,Math.max(.1,+b.min||10))*60000,done:false,winner:null};
+  else if(r==='roundend'){if(S.round.end&&!S.round.done)finish()}
+  else if(r==='roundreset')S.round={end:0,done:false,winner:null};
   else if(r==='auto')S.auto=!!b.on;
   save();send(res,{ok:1})})
 }).listen(PORT,()=>console.log('Trading Room on port '+PORT));

@@ -10,6 +10,7 @@ a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:va
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mu)}.big{font-size:28px;font-weight:700}.sc{overflow-x:auto}table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu);font-weight:500;font-size:13px}svg{width:100%;height:auto;display:block}
 </style></head><body><main>
 <div class="row sp"><h1>📈 Trading Room</h1><span class="row"><span id="who" class="mu"></span><button id="so" hidden>Sign out</button></span></div>
+<div class="card" id="rd" hidden><div class="row sp"><div><div class="mu">Round</div><div class="big" id="rt"></div></div><div id="rw" style="text-align:right"></div></div></div>
 <div class="card row sp"><span class="mu">Invite link: <b id="lnk"></b></span><button id="cp">Copy link</button></div>
 <div id="join" class="card" hidden><h2 id="ah">Sign in</h2><div class="row"><input id="un" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" type="password" placeholder="Password (6+ characters)"><button class="p" id="jb">Sign in</button></div><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
 <div id="claim" class="card" hidden><h2>Create your login</h2><div class="mu">Pick a username and password so you can sign back in from any phone. Your balance stays.</div><div class="row" style="margin-top:8px"><input id="cu" placeholder="Username" maxlength="20" autocapitalize="none"><input id="cp" type="password" placeholder="Password (6+ characters)"><button class="p" id="cb">Save login</button><span id="cmsg" class="dn"></span></div></div>
@@ -21,6 +22,7 @@ a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:va
 <div class="row"><input id="np" type="number" step="any"><button class="p" id="setp">Set price</button><button data-n="-10">−10%</button><button data-n="-5">−5%</button><button data-n="5">+5%</button><button data-n="10">+10%</button></div>
 <h2 style="margin:14px 0 8px">Steer the trend <span id="tr" class="mu"></span></h2><div class="row"><button class="b" data-t="1">🚀 Pump hard</button><button class="b" data-t="0.3">▲ Pump</button><button data-t="0">■ Hold</button><button class="s" data-t="-0.3">▼ Dump</button><button class="s" data-t="-1">💥 Crash</button></div>
 <div class="row" style="margin-top:10px"><button id="auto"></button><input id="ns" placeholder="Ticker" maxlength="6"><input id="nsp" type="number" placeholder="Price"><button id="adds">Add asset</button><button id="dels">Remove this asset</button></div>
+<h2 style="margin-top:16px">Round timer</h2><div class="row"><input id="rm" type="number" min="0.1" step="any" value="10" style="width:80px"><span class="mu">minutes</span><button class="p" id="rs">Start round</button><button class="s" id="re">End now</button><button id="rr">Reset</button></div><div class="mu" style="margin-top:6px">When the timer ends, trading stops and the winner is shown to everyone.</div>
 <h2 style="margin-top:16px">Savings records</h2>
 <div class="row"><input id="snum" placeholder="Deposit number" style="width:150px"><input id="sdate" type="date" style="width:150px"><button id="ssave">Save number &amp; date</button></div>
 <div class="row" style="margin-top:8px"><select id="spl"></select><input id="samt" type="number" placeholder="Amount KES"><input id="scode" placeholder="M-Pesa code" maxlength="20"><button class="b" id="sdep">Record deposit</button><button class="s" id="swd">Record withdrawal</button></div>
@@ -32,7 +34,7 @@ if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',loc
 let S=null,sel=null,me=JSON.parse(localStorage.me||'null'),host=false;
 const m=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}),pf=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:n>=10?2:4,maximumFractionDigits:n>=10?2:4}),f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||'','x-id':me?me.id:'','x-token':me?me.token:''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
-async function load(){const s=await api('state');if(s.assets){S=s;host=s.admin;render();renderSv()}}
+async function load(){const s=await api('state');if(s.assets){S=s;host=s.admin;render();renderSv();renderRound()}}
 const eq=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
 function render(){
  if(me&&!S.players[me.id]){me=null;localStorage.removeItem('me')}
@@ -41,22 +43,28 @@ function render(){
  $('#tabs').innerHTML=keys.map(k=>'<button data-k="'+k+'" class="'+(k===sel?'on':'')+'">'+k+'</button>').join('');
  const a=S.assets[sel],c=a.c,ch=(a.price-c[0].o)/c[0].o*100;
  $('#px').textContent='$'+pf(a.price);$('#chg').innerHTML='<span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span> <span class="mu">over the last 10 min · H '+pf(Math.max(...c.map(x=>x.h)))+' · L '+pf(Math.min(...c.map(x=>x.l)))+'</span>';
- chart(c);
- if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>Total $'+m(eq(p));$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel}else $('#eq').textContent='';
+ const mp=me&&S.players[me.id];chart(c,mp&&mp.avg?mp.avg[sel]:0);
+ if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>Total $'+m(eq(p));$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel+(p.avg&&p.avg[sel]?' · entry $'+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+'$'+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0))):'')}else $('#eq').textContent='';
  const rows=Object.entries(S.players).map(([id,p])=>({id,p,e:eq(p)})).sort((x,y)=>y.e-x.e);
  $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash</th><th>Total</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>$'+m(r.p.cash)+'</td><td>$'+m(r.e)+'</td></tr>').join('');
  $('#lnk').textContent=location.origin;
  if(host){$('#tr').textContent=a.trend?'(now '+(a.trend>0?'+':'')+a.trend+'% per 2s)':'(holding)';$('#auto').textContent='Random wiggle: '+(S.auto?'on':'off');if(document.activeElement.id!=='np')$('#np').value=a.price;
   if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+' <span class="mu">'+(r.p.user?'@'+esc(r.p.user):'no login')+'</span></td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-u="'+r.id+'">+$5 play</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-p="'+r.id+'">Reset password</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
-function chart(c){const W=800,H=330,pr=58,ph=240,vy=262,vh=60,n=c.length,pw=W-pr;
- let mn=Math.min(...c.map(x=>x.l)),mx=Math.max(...c.map(x=>x.h));const pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
+function chart(c,en){const W=800,H=330,pr=58,ph=240,vy=262,vh=60,n=c.length,pw=W-pr;
+ let mn=Math.min(...c.map(x=>x.l)),mx=Math.max(...c.map(x=>x.h));if(en){mn=Math.min(mn,en);mx=Math.max(mx,en)}const pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
  const Y=v=>10+(mx-v)/(mx-mn)*ph,cw=pw/n,vm=Math.max(...c.map(x=>x.v))||1;let s='';
  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,y=Y(v);s+='<line x1="0" x2="'+pw+'" y1="'+y+'" y2="'+y+'" stroke="var(--bd)"/><text x="'+(W-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="var(--mu)">'+pf(v)+'</text>'}
  c.forEach((x,i)=>{const col=x.c>=x.o?'var(--up)':'var(--dn)',cx=i*cw+cw/2,bw=Math.max(1,cw*.7),yo=Y(x.o),yc=Y(x.c),h=x.v/vm*vh;
   s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+Math.min(yo,yc)+'" width="'+bw+'" height="'+Math.max(1,Math.abs(yo-yc))+'" fill="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+(vy+vh-h)+'" width="'+bw+'" height="'+h+'" fill="'+col+'" opacity=".4"/>'});
+ if(en){const ey=Y(en);s+='<line x1="0" x2="'+pw+'" y1="'+ey+'" y2="'+ey+'" stroke="#f0b90b" stroke-width="1.5" stroke-dasharray="6 4"/><text x="6" y="'+(ey-5)+'" font-size="11" fill="#f0b90b">Your entry '+pf(en)+'</text>'}
  const l=c[n-1],ly=Y(l.c),lc=l.c>=l.o?'var(--up)':'var(--dn)';
  s+='<line x1="0" x2="'+pw+'" y1="'+ly+'" y2="'+ly+'" stroke="'+lc+'" stroke-dasharray="4 3"/><rect x="'+pw+'" y="'+(ly-9)+'" width="'+pr+'" height="18" fill="'+lc+'"/><text x="'+(W-4)+'" y="'+(ly+4)+'" text-anchor="end" font-size="11" fill="#fff">'+pf(l.c)+'</text>';
  $('#chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg>'}
+let rt0=0,rl0=0;
+function renderRound(){const r=S.round;rt0=Date.now();rl0=r.left;$('#rd').hidden=!(r.active||r.done);tick()}
+function tick(){const r=S.round;if(!r)return;if(r.done){$('#rt').textContent='Round over';$('#rw').innerHTML=r.winner?'🏆 Winner: <b>'+esc(r.winner.name)+'</b>':'';return}
+ if(!r.active)return;const l=Math.max(0,rl0-(Date.now()-rt0)),q=Math.floor(l/1000);$('#rt').textContent=String(Math.floor(q/60)).padStart(2,'0')+':'+String(q%60).padStart(2,'0')+' left';$('#rw').textContent=l?'':'Finishing…'}
+setInterval(tick,1000);
 let reg=false;
 function authUi(){$('#ah').textContent=reg?'Create account · you start with $'+m(S.startCash):'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
 const K=n=>'KES '+f(n);
@@ -95,7 +103,7 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='dels')act('del',{sym:sel});
  if(d.c)act('cash',{id:d.c,cash:$('#c_'+d.c).value});
  if(d.r)act('clear',{id:d.r});
- if(t.id==='scb')act('startcash',{amt:$('#sc').value});
+ if(t.id==='scb')act('startcash',{amt:$('#sc').value});if(t.id==='rs')act('roundstart',{min:$('#rm').value});if(t.id==='re')act('roundend',{});if(t.id==='rr')act('roundreset',{});
  if(d.p){const pw=prompt('New password for this player (6+ characters)');if(pw){const u=S.players[d.p].user?'':prompt('Choose a username for this player (letters, numbers, _)');const r=await api('resetpw',{id:d.p,password:pw,username:u});if(r.error)alert(r.error);load()}}
  if(d.u)act('topup',{id:d.u,amt:5});if(d.sd)act('sdel',{lid:d.sd});
  if(t.id==='ssave')act('savecfg',{number:$('#snum').value,date:$('#sdate').value});
