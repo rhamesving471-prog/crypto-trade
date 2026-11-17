@@ -6,19 +6,28 @@ const COINS={BTC:65000,ETH:3200,SOL:150,BNB:600,XRP:0.55,ADA:0.45,AVAX:35,DOT:7,
 function mk(price,n=N,t0=bk()){let p=price,c=[];const t=t0;for(let i=0;i<n;i++){const cl=p,o=rd(cl/(1+(Math.random()-.5)*.012));c.unshift({t:t-i*B,o,h:rd(Math.max(o,cl)*(1+Math.random()*.004)),l:rd(Math.min(o,cl)*(1-Math.random()*.004)),c:cl,v:Math.round(20+Math.random()*80)});p=o}return{price,trend:0,c}}
 let S={assets:Object.fromEntries(Object.entries(COINS).map(([k,v])=>[k,mk(v)])),players:{},auto:false};
 try{S=JSON.parse(fs.readFileSync(FILE))}catch(e){}
+function migrate(){
 S.sv=S.sv||{number:'',date:'2026-12-25',log:[]};S.round=S.round||{end:0,done:false,winner:null};
 if(!S.v2){S.startCash=5;S.v2=1}S.startCash=S.startCash??5;
 for(const k in S.assets){const a=S.assets[k];if(!a.c)a.c=mk(a.price).c;a.trend=a.trend||0;delete a.hist;if(a.c.length<N)a.c=mk(a.c[0].o,N-a.c.length,a.c[0].t-B).c.concat(a.c)}
 S.tape=S.tape||[];
 if(!S.v3){for(const o of ['ACME','MOON','BYTE']){const a=S.assets[o];if(!a)continue;for(const p of Object.values(S.players)){const q=p.pos&&p.pos[o];if(q){p.cash=+(p.cash+q*a.price).toFixed(4);delete p.pos[o]}}delete S.assets[o]}
  for(const k in COINS)if(!S.assets[k])S.assets[k]=mk(COINS[k]);S.v3=1}
+}
+migrate();
 const eqOf=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
 const finish=()=>{let best=null;for(const p of Object.values(S.players)){const e=eqOf(p);if(!best||e>best.eq)best={name:p.name,eq:+e.toFixed(4)}}S.round.done=true;S.round.winner=best};
-const save=()=>{try{fs.writeFileSync(FILE,JSON.stringify(S))}catch(e){}};
+const lsave=()=>{try{fs.writeFileSync(FILE,JSON.stringify(S))}catch(e){}};
+const RU=(process.env.UPSTASH_REDIS_REST_URL||'').replace(/\/$/,''),RT=process.env.UPSTASH_REDIS_REST_TOKEN||'',RK='trading-room-v1';let dirty=false,blocked=false;
+const save=()=>{dirty=true;lsave()};
+async function rload(){if(!RU)return null;for(let i=0;i<3;i++){try{const r=await fetch(RU+'/get/'+RK,{headers:{Authorization:'Bearer '+RT}});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();return j.result?JSON.parse(j.result):null}catch(e){console.log('Could not load saved data ('+e.message+'), try '+(i+1))}await new Promise(z=>setTimeout(z,1000))}blocked=true;console.log('WARNING: saving is switched off so old data is not overwritten. Check the Upstash settings.');return null}
+async function rsave(){if(!RU||!dirty||blocked)return;dirty=false;try{const slim={...S,tape:undefined,assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,{price:a.price,trend:a.trend}]))};const r=await fetch(RU+'/set/'+RK,{method:'POST',headers:{Authorization:'Bearer '+RT},body:JSON.stringify(slim)});if(!r.ok)throw new Error('HTTP '+r.status)}catch(e){dirty=true;console.log('Save failed: '+e.message)}}
+setInterval(rsave,5000);setInterval(()=>{dirty=true},300000);
+process.on('SIGTERM',async()=>{dirty=true;await rsave();process.exit(0)});
 const push=(k,p,v=0)=>{const a=S.assets[k],t=bk(),l=a.c[a.c.length-1];p=rd(p);const o=l?l.c:p;
  if(l&&l.t===t){l.h=Math.max(l.h,p);l.l=Math.min(l.l,p);l.c=p;l.v+=v}else a.c.push({t,o,h:Math.max(o,p),l:Math.min(o,p),c:p,v});
  a.c=a.c.slice(-N);a.price=p};
-setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}if(S.round.end&&!S.round.done&&Date.now()>=S.round.end)finish();save()},2000);
+setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}if(S.round.end&&!S.round.done&&Date.now()>=S.round.end)finish();lsave()},2000);
 const hp=(pw,salt)=>crypto.scryptSync(pw,salt,32);
 const mkpw=pw=>{const salt=crypto.randomBytes(8).toString('hex');return{salt,hash:hp(pw,salt).toString('hex')}};
 const okpw=(p,pw)=>!!(p.hash&&p.salt&&crypto.timingSafeEqual(hp(pw,p.salt),Buffer.from(p.hash,'hex')));
@@ -32,9 +41,10 @@ const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),as
 const zlib=require('zlib');
 const sendz=(req,res,o)=>{const b=Buffer.from(JSON.stringify(o));if(/gzip/.test(req.headers['accept-encoding']||'')){res.writeHead(200,{'content-type':'application/json','content-encoding':'gzip'});res.end(zlib.gzipSync(b))}else{res.writeHead(200,{'content-type':'application/json'});res.end(b)}};
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
-http.createServer((req,res)=>{
+const srv=http.createServer((req,res)=>{
+ if(req.method==='GET'&&req.url==='/ping'){res.writeHead(200);return res.end('ok')}
  if(req.method==='GET'&&req.url.split('?')[0]==='/'){res.writeHead(200,{'content-type':'text/html'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res)}
- if(req.method==='GET'&&req.url.startsWith('/api/state')){const adm=req.headers['x-admin']===KEY;return sendz(req,res,{...pub(adm,who(req),new URL(req.url,'http://x').searchParams.get('sym')),admin:adm})};
+ if(req.method==='GET'&&req.url.startsWith('/api/state')){const adm=req.headers['x-admin']===KEY;return sendz(req,res,{...pub(adm,who(req),new URL(req.url,'http://x').searchParams.get('sym')),admin:adm,persist:!!RU})};
  if(req.method!=='POST')return send(res,{error:'not found'},404);
  let raw='';req.on('data',d=>{raw+=d;if(raw.length>1e4)req.destroy()});
  req.on('end',()=>{let b={};try{b=JSON.parse(raw||'{}')}catch(e){}
@@ -87,4 +97,7 @@ http.createServer((req,res)=>{
   else if(r==='svshow')S.sv.show=!!b.on;
   else if(r==='auto')S.auto=!!b.on;
   save();send(res,{ok:1})})
-}).listen(PORT,()=>console.log('Trading Room on port '+PORT));
+});
+rload().then(r=>{if(r){S=r;migrate();console.log('Loaded saved data')}
+ srv.listen(PORT,()=>{console.log('Trading Room on port '+PORT+(RU?' (saving to Upstash)':' (WARNING: no permanent storage)'));
+  if(process.env.RENDER_EXTERNAL_URL)setInterval(()=>{fetch(process.env.RENDER_EXTERNAL_URL+'/ping').catch(()=>{})},10*60*1000)})});

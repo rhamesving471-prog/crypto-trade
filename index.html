@@ -13,15 +13,20 @@ svg{width:100%;height:auto;display:block}
 <div class="row sp"><h1>📈 Trading Room</h1><span class="row"><span id="who" class="mu"></span><button id="so" hidden>Sign out</button></span></div>
 <div class="card" id="rd" hidden><div class="row sp"><div><div class="mu">Round</div><div class="big" id="rt"></div></div><div id="rw" style="text-align:right"></div></div></div>
 <div class="card row sp"><span class="mu">Invite link: <b id="lnk"></b></span><button id="cp">Copy link</button></div>
-<div id="join" class="card" hidden><h2 id="ah">Sign in</h2><div class="row"><input id="un" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" type="password" placeholder="Password (6+ characters)"><button class="p" id="jb">Sign in</button></div><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
+<div id="join" class="card" hidden><h2 id="ah">Sign in</h2><form class="row" id="af" onsubmit="return false"><input id="un" name="username" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" name="password" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"><button class="p" id="jb" type="submit">Sign in</button></form><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
 <div id="claim" class="card" hidden><h2>Create your login</h2><div class="mu">Pick a username and password so you can sign back in from any phone. Your balance stays.</div><div class="row" style="margin-top:8px"><input id="cu" placeholder="Username" maxlength="20" autocapitalize="none"><input id="cp" type="password" placeholder="Password (6+ characters)"><button class="p" id="cb">Save login</button><span id="cmsg" class="dn"></span></div></div>
 <div class="grid"><div><div class="card"><div class="row" id="tabs"></div><div class="row sp" style="margin-top:10px"><div><div class="big" id="px"></div><div id="chg"></div></div><div class="mu" id="eq" style="text-align:right"></div></div><div class="stats" id="st"></div>
 <div class="row sp" style="margin-top:10px"><div class="row" id="tf"></div><div class="row"><button id="zo">−</button><button id="zi">+</button><button id="zr">Reset</button></div></div><div class="mu" id="ohlc" style="min-height:18px;margin-top:6px;font-size:12px"></div><div id="chart"></div><div class="mu" style="font-size:12px">Scroll to zoom · drag to move · gold = MA7, purple = MA25</div></div></div>
 <div><div class="card"><h2>Order book (simulated)</h2><div id="ob"></div></div><div class="card"><h2>Recent trades</h2><div id="tp"></div></div></div></div>
-<div class="card" id="trade" hidden><h2>Trade</h2><div class="row"><input id="qty" type="number" min="0.00000001" step="any" placeholder="Quantity"><button id="mx">Max buy</button><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><span id="tm" class="mu"></span></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
+<div class="card" id="trade" hidden><h2>Trade <span class="mu" id="pair" style="font-weight:400;text-transform:none"></span></h2>
+<div class="mu" id="avail"></div>
+<div class="row" style="margin-top:8px"><input id="qty" type="number" min="0" step="any" placeholder="Amount in USDT" style="width:170px"><span class="mu">USDT</span><span id="est" class="mu"></span></div>
+<div class="row" style="margin-top:8px"><button data-amt="1">1</button><button data-amt="2">2</button><button data-amt="5">5</button><button data-amt="10">10</button><button data-pc="100">Max</button></div>
+<div class="row" style="margin-top:8px"><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><button class="s" id="sa">Sell all</button></div>
+<div id="tm" class="mu" style="margin-top:6px"></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
 <div class="card" id="sv" hidden><h2>Holiday savings</h2><div class="row sp"><div><div class="mu">Your locked savings</div><div class="big" id="svt">KES 0.00</div></div><div style="text-align:right"><div class="mu">Withdrawals open in</div><div id="cd" style="font-weight:600"></div></div></div><div id="dep" style="margin-top:10px"></div><div class="sc" style="margin-top:8px"><table id="svl"></table></div></div>
 <div class="card" id="lbcard" hidden><h2>Leaderboard (host only)</h2><div class="sc"><table id="lb"></table></div></div>
-<div class="card" id="admin" hidden><h2>Host controls</h2>
+<div class="card" id="admin" hidden><h2>Host controls</h2><div id="pwarn" class="dn" style="margin-bottom:10px" hidden>⚠ Accounts and balances are NOT saved permanently yet. They disappear whenever the app restarts, so friends have to sign up again. Connect Upstash (free) to fix this.</div>
 <div class="row"><input id="np" type="number" step="any"><button class="p" id="setp">Set price</button><button data-n="-10">−10%</button><button data-n="-5">−5%</button><button data-n="5">+5%</button><button data-n="10">+10%</button></div>
 <h2 style="margin:14px 0 8px">Steer the trend <span id="tr" class="mu"></span></h2><div class="row"><button class="b" data-t="1">🚀 Pump hard</button><button class="b" data-t="0.3">▲ Pump</button><button data-t="0">■ Hold</button><button class="s" data-t="-0.3">▼ Dump</button><button class="s" data-t="-1">💥 Crash</button></div>
 <div class="row" style="margin-top:10px"><button id="auto"></button><input id="ns" placeholder="Ticker" maxlength="6"><input id="nsp" type="number" placeholder="Price"><button id="adds">Add asset</button><button id="dels">Remove this asset</button></div>
@@ -30,7 +35,7 @@ svg{width:100%;height:auto;display:block}
 <div class="row"><input id="snum" placeholder="Deposit number" style="width:150px"><input id="sdate" type="date" style="width:150px"><button id="ssave">Save number &amp; date</button></div>
 <div class="row" style="margin-top:8px"><select id="spl"></select><input id="samt" type="number" placeholder="Amount KES"><input id="scode" placeholder="M-Pesa code" maxlength="20"><button class="b" id="sdep">Record deposit</button><button class="s" id="swd">Record withdrawal</button></div>
 <div id="smsg" class="mu" style="margin-top:6px"></div><label class="mu" style="display:block;margin:6px 0"><input type="checkbox" id="shw" style="width:auto"> Show the deposit number to players</label><div class="mu" id="stot" style="margin:8px 0"></div><div class="sc"><table id="sall"></table></div>
-<h2 style="margin-top:16px">Players (play money)</h2><div class="row" style="margin-bottom:8px"><span class="mu">New players start with $</span><input id="sc" type="number" step="any" style="width:90px"><button id="scb">Save</button></div><div class="sc"><table id="pl"></table></div></div>
+<h2 style="margin-top:16px">Players (play money)</h2><div class="row" style="margin-bottom:8px"><span class="mu">New players start with (USDT):</span><input id="sc" type="number" step="any" style="width:90px"><button id="scb">Save</button></div><div class="sc"><table id="pl"></table></div></div>
 </main><script>
 const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
 if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',location.pathname)}
@@ -45,18 +50,18 @@ function render(){
  $('#join').hidden=!!me;$('#trade').hidden=!me;$('#admin').hidden=!host;$('#who').textContent=(host?'Host · ':'')+(me?S.players[me.id].name:'');
  $('#tabs').innerHTML=keys.map(k=>'<button data-k="'+k+'" class="'+(k===sel?'on':'')+'">'+k+'</button>').join('');
  const a=S.assets[sel],c=a.c;if(c.length<10){if(!ld){ld=1;load().then(()=>ld=0)}return}const ch=(a.price-c[0].o)/c[0].o*100;
- const pp=me&&S.players[me.id];$('#px').innerHTML=pp?'<span class="mu" style="font-size:12px;font-weight:400;display:block">Your balance</span>$'+m(eq(pp)):'<span class="mu" style="font-size:16px;font-weight:400">Sign in to see your balance</span>';$('#chg').innerHTML='<span class="mu">'+sel+' </span><span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span>';
+ const pp=me&&S.players[me.id];$('#px').innerHTML=pp?'<span class="mu" style="font-size:12px;font-weight:400;display:block">Your balance</span>'+m(eq(pp))+' USDT':'<span class="mu" style="font-size:16px;font-weight:400">Sign in to see your balance</span>';$('#chg').innerHTML='<span class="mu">'+sel+' </span><span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span>';
  const hi=Math.max(...c.map(x=>x.h)),lo=Math.min(...c.map(x=>x.l)),vo=c.reduce((q,x)=>q+x.v,0);
  $('#st').innerHTML='<div><span>High</span>'+pf(hi)+'</div><div><span>Low</span>'+pf(lo)+'</div><div><span>Volume</span>'+Math.round(vo).toLocaleString()+'</div><div><span>History</span>'+Math.round(c.length/6)+' min</div>';
  $('#tf').innerHTML=TFS.map(([q,l])=>'<button data-tf="'+q+'" class="'+(q===tf?'on':'')+'">'+l+'</button>').join('');
  drawChart();$('#ob').innerHTML=book(a.price);$('#tp').innerHTML=tape();
- if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash $'+m(p.cash)+'<br>In coins $'+m(eq(p)-p.cash);$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel+(p.avg&&p.avg[sel]?' · entry $'+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+'$'+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0))):'')}else $('#eq').textContent='';
+ if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash '+m(p.cash)+' USDT<br>In coins '+m(eq(p)-p.cash)+' USDT';$('#hold').textContent='You hold '+(+(p.pos[sel]||0).toFixed(8))+' × '+sel+(p.avg&&p.avg[sel]?' · entry '+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0)))+' USDT':'')}else $('#eq').textContent='';
  const rows=Object.entries(S.players).map(([id,p])=>({id,p,e:eq(p)})).sort((x,y)=>y.e-x.e);
- $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash</th><th>Total</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>$'+m(r.p.cash)+'</td><td>$'+m(r.e)+'</td></tr>').join('');
+ $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash (USDT)</th><th>Total (USDT)</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>'+m(r.p.cash)+'</td><td>'+m(r.e)+'</td></tr>').join('');
  $('#lnk').textContent=location.origin;
  if(host){$('#tr').textContent=a.trend?'(now '+(a.trend>0?'+':'')+a.trend+'% per 2s)':'(holding)';$('#auto').textContent='Random wiggle: '+(S.auto?'on':'off');if(document.activeElement.id!=='np')$('#np').value=a.price;
-  if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+' <span class="mu">'+(r.p.user?'@'+esc(r.p.user):'no login')+'</span></td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-u="'+r.id+'">+$5 play</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-p="'+r.id+'">Reset password</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
-const TFS=[[10,'10s'],[30,'30s'],[60,'1m'],[300,'5m']];let tf=10,vis=60,off=0,hx=null,CV=null,ld=0,drag=null;
+  if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+' <span class="mu">'+(r.p.user?'@'+esc(r.p.user):'no login')+'</span></td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-u="'+r.id+'">+5 USDT play</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-p="'+r.id+'">Reset password</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
+const TFS=[[10,'10s'],[30,'30s'],[60,'1m'],[300,'5m']];let md='usd',tf=10,vis=60,off=0,hx=null,CV=null,ld=0,drag=null;
 const agg=(c,sec)=>{if(sec===10)return c;const ms=sec*1000,o=[];for(const x of c){const b=Math.floor(x.t/ms)*ms,l=o[o.length-1];if(l&&l.t===b){l.h=Math.max(l.h,x.h);l.l=Math.min(l.l,x.l);l.c=x.c;l.v+=x.v}else o.push({t:b,o:x.o,h:x.h,l:x.l,c:x.c,v:x.v})}return o};
 const ma=(c,n)=>c.map((_,i)=>i<n-1?null:c.slice(i-n+1,i+1).reduce((q,x)=>q+x.c,0)/n);
 const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:tf<60?'2-digit':undefined});
@@ -94,7 +99,7 @@ function book(price){const tb=Math.floor(Date.now()/3000),rr=(i,d)=>{const q=Mat
  const side=d=>{const o=[];for(let i=1;i<=8;i++)o.push([price+d*stp*i,(200+rr(i,d)*2000)/price]);return o};
  const asks=side(1).reverse(),bids=side(-1),mx=Math.max(...asks.concat(bids).map(r=>r[1]));
  const row=(r,col)=>'<div class="ob" style="background:linear-gradient(to left,'+col+'33 '+(r[1]/mx*100)+'%,transparent 0)"><span style="color:'+col+'">'+pf(r[0])+'</span><span>'+r[1].toPrecision(4)+'</span></div>';
- return '<div class="ob mu"><span>Price</span><span>Qty</span></div>'+asks.map(r=>row(r,'#f6465d')).join('')+'<div style="font-size:18px;font-weight:700;margin:6px 4px">$'+pf(price)+'</div>'+bids.map(r=>row(r,'#0ecb81')).join('')}
+ return '<div class="ob mu"><span>Price</span><span>Qty</span></div>'+asks.map(r=>row(r,'#f6465d')).join('')+'<div style="font-size:18px;font-weight:700;margin:6px 4px">'+pf(price)+' <span class="mu" style="font-size:12px">USDT</span></div>'+bids.map(r=>row(r,'#0ecb81')).join('')}
 function tape(){const t=(S.tape||[]).slice().reverse();return t.length?t.map(x=>'<div class="ob"><span style="color:'+(x.side==='buy'?'#0ecb81':'#f6465d')+'">'+pf(x.price)+'</span><span>'+(+x.qty.toPrecision(4))+'</span><span class="mu">'+hm(x.t)+'</span></div>').join(''):'<div class="mu">No trades yet</div>'}
 let rt0=0,rl0=0;
 function renderRound(){const r=S.round;rt0=Date.now();rl0=r.left;$('#rd').hidden=!(r.active||r.done);tick()}
@@ -102,17 +107,18 @@ function tick(){const r=S.round;if(!r)return;if(r.done){$('#rt').textContent='Ro
  if(!r.active)return;const l=Math.max(0,rl0-(Date.now()-rt0)),q=Math.floor(l/1000);$('#rt').textContent=String(Math.floor(q/60)).padStart(2,'0')+':'+String(q%60).padStart(2,'0')+' left';$('#rw').textContent=l?'':'Finishing…'}
 setInterval(tick,1000);
 let reg=false;
-function authUi(){$('#ah').textContent=reg?'Create account · you start with $'+m(S.startCash):'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
+function authUi(){$('#ah').textContent=reg?'Create account · you start with '+m(S.startCash)+' USDT':'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
 const K=n=>'KES '+f(n);
 function cdText(){const ms=new Date(S.savings.date+'T00:00:00+03:00')-Date.now();if(isNaN(ms))return '';if(ms<=0)return 'Open now 🎉 ('+S.savings.date+')';return Math.floor(ms/864e5)+' days '+Math.floor(ms%864e5/36e5)+' h · '+S.savings.date}
-function renderSv(){
+function tradeUi(){const a=S.assets[sel],v=+$('#qty').value,p=me&&S.players[me.id];$('#pair').textContent=sel+'/USDT';$('#avail').textContent=p?'Available: '+m(p.cash)+' USDT':'';$('#est').textContent=v>0&&a?'≈ '+(+(v/a.price).toPrecision(4))+' '+sel:''}
+function renderSv(){tradeUi();
  const v=S.savings,id=me&&me.id,p=id&&S.players[id];
  $('#claim').hidden=!(p&&!p.user);$('#so').hidden=!me;authUi();$('#lbcard').hidden=!host;$('#sv').hidden=!(me||host);$('#svt').parentElement.hidden=!me;
  $('#svt').textContent=K(p?p.saved:0);$('#cd').textContent=cdText();
  $('#dep').innerHTML=v.number?'<div class="row"><span class="mu">Send your savings to:</span><b>'+esc(v.number)+'</b><button id="cpn">Copy number</button></div><div class="mu" style="margin-top:6px">After you send, give the host your M-Pesa code. It counts as saved once the host records it. Savings never go into the game.</div>':(host?'<div class="mu">You haven’t added a deposit number yet.</div>':'<div class="mu">Ask the host how to send your savings. After you send, give the host your M-Pesa code. It counts as saved once the host records it.</div>');
  $('#svl').innerHTML='<tr><th>Date</th><th>Player</th><th>Type</th><th>Amount</th><th>Code</th>'+(host?'<th></th>':'')+'</tr>'+(v.log||[]).slice().reverse().map(e=>'<tr><td>'+new Date(e.t).toLocaleDateString()+'</td><td>'+esc(e.name)+'</td><td>'+e.type+'</td><td>'+K(e.amt)+'</td><td>'+esc(e.code||'')+'</td>'+(host?'<td><button data-sd="'+e.lid+'">Delete</button></td>':'')+'</tr>').join('');
  if(!host)return;
- const ae=document.activeElement.id;
+ $('#pwarn').hidden=!!S.persist;const ae=document.activeElement.id;
  if(ae!=='snum')$('#snum').value=v.number||'';
  if(ae!=='sdate')$('#sdate').value=v.date;if(ae!=='sc')$('#sc').value=S.startCash;if(ae!=='shw')$('#shw').checked=!!v.show;
  const ops=Object.entries(S.players).map(([i,q])=>'<option value="'+i+'">'+esc(q.name)+'</option>').join('');
@@ -120,6 +126,7 @@ function renderSv(){
  $('#stot').textContent='Group total locked: '+K(v.total||0);
  $('#sall').innerHTML='<tr><th>Player</th><th>Saved</th></tr>'+Object.values(S.players).map(q=>'<tr><td>'+esc(q.name)+'</td><td>'+K(q.saved)+'</td></tr>').join('')}
 async function act(p,b){await api(p,b);load()}
+document.addEventListener('input',e=>{if(e.target.id==='qty')tradeUi()});
 document.addEventListener('change',e=>{if(e.target.id==='shw'&&host)act('svshow',{on:e.target.checked})});
 document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(d.k){sel=d.k;off=0;hx=null;load()}if(d.tf){tf=+d.tf;off=0;vis=60;render()}if(t.id==='zi'){vis=Math.max(15,Math.round(vis*.8));drawChart()}if(t.id==='zo'){vis=Math.min(240,Math.round(vis*1.25));drawChart()}if(t.id==='zr'){vis=60;off=0;drawChart()}
@@ -129,8 +136,20 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='jb'){const r=await api(reg?'register':'login',{username:$('#un').value,password:$('#pw').value});if(r.id){me=r;localStorage.me=JSON.stringify(r);$('#pw').value='';$('#amsg').textContent='';load()}else $('#amsg').textContent=r.error||'Try again'}
  if(t.id==='cb'){const r=await api('setlogin',{id:me.id,token:me.token,username:$('#cu').value,password:$('#cp').value});$('#cmsg').textContent=r.error||'';if(!r.error){$('#cp').value='';load()}}
  if(t.id==='so'){localStorage.removeItem('me');me=null;load()}
- if(t.id==='mx'&&me&&S.players[me.id]){$('#qty').value=Math.floor(S.players[me.id].cash/S.assets[sel].price*1e8)/1e8}
- if(t.id==='buy'||t.id==='sell'){if(!(+$('#qty').value>0)){$('#tm').textContent='Enter a quantity, or tap Max buy';return}const r=await api('trade',{id:me.id,token:me.token,sym:sel,side:t.id,qty:$('#qty').value});$('#tm').textContent=r.error||'Done';load()}
+ 
+ if(t.id==='buy'||t.id==='sell'||t.id==='sa'){const p=me&&S.players[me.id],a=S.assets[sel],tm=$('#tm');if(!p)return;
+ const held=p.pos[sel]||0;let side=t.id==='buy'?'buy':'sell',q=0,v=+$('#qty').value;
+ if(t.id==='sa'){if(!(held>0)){tm.textContent='You don’t hold any '+sel;return}q=held}
+ else{if(!(v>0)){tm.textContent='Enter an amount in USDT, or tap a quick amount';return}q=md==='usd'?v/a.price:v;
+  if(side==='buy'){const mq=Math.floor(p.cash/a.price*1e8)/1e8;q=Math.floor(q*1e8)/1e8;if(md==='usd'&&q>mq&&v<=p.cash+0.005)q=mq}
+  else{q=Math.min(q,held);if(md==='usd'&&v>=held*a.price-0.005)q=held;if(q<held)q=Math.floor(q*1e8)/1e8}}
+ if(!(q>0)){tm.textContent='That amount is too small';return}
+ const r=await api('trade',{id:me.id,token:me.token,sym:sel,side,qty:q});
+ tm.textContent=r.error||((side==='buy'?'Bought ':'Sold ')+(+q.toPrecision(4))+' '+sel+' at '+pf(a.price)+' USDT');
+ if(!r.error){$('#qty').value='';tradeUi()}load()}
+ if(d.m){md=d.m;$('#qty').value='';tradeUi()}
+ if(d.amt){$('#qty').value=d.amt;tradeUi()}
+ if(d.pc&&me&&S.players[me.id]){const c=S.players[me.id].cash*d.pc/100;$('#qty').value=md==='usd'?Math.floor(c*100)/100:Math.floor(c/S.assets[sel].price*1e8)/1e8;tradeUi()}
  if(!host)return;
  if(t.id==='setp')act('price',{sym:sel,price:$('#np').value});
  if(d.t!==undefined)act('trend',{sym:sel,pct:+d.t});
