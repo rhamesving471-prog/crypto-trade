@@ -21,13 +21,13 @@ const lsave=()=>{try{fs.writeFileSync(FILE,JSON.stringify(S))}catch(e){}};
 const RU=(process.env.UPSTASH_REDIS_REST_URL||'').replace(/\/$/,''),RT=process.env.UPSTASH_REDIS_REST_TOKEN||'',RK='trading-room-v1';let dirty=false,blocked=false;
 const save=()=>{dirty=true;lsave()};
 async function rload(){if(!RU)return null;for(let i=0;i<3;i++){try{const r=await fetch(RU+'/get/'+RK,{headers:{Authorization:'Bearer '+RT}});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();return j.result?JSON.parse(j.result):null}catch(e){console.log('Could not load saved data ('+e.message+'), try '+(i+1))}await new Promise(z=>setTimeout(z,1000))}blocked=true;console.log('WARNING: saving is switched off so old data is not overwritten. Check the Upstash settings.');return null}
-async function rsave(){if(!RU||!dirty||blocked)return;dirty=false;try{const slim={...S,tape:undefined,assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,{price:a.price,trend:a.trend}]))};const r=await fetch(RU+'/set/'+RK,{method:'POST',headers:{Authorization:'Bearer '+RT},body:JSON.stringify(slim)});if(!r.ok)throw new Error('HTTP '+r.status)}catch(e){dirty=true;console.log('Save failed: '+e.message)}}
+async function rsave(){if(!RU||!dirty||blocked)return;dirty=false;try{const slim={...S,tape:undefined,assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,{price:a.price,trend:a.trend,base:a.base,revert:a.revert}]))};const r=await fetch(RU+'/set/'+RK,{method:'POST',headers:{Authorization:'Bearer '+RT},body:JSON.stringify(slim)});if(!r.ok)throw new Error('HTTP '+r.status)}catch(e){dirty=true;console.log('Save failed: '+e.message)}}
 setInterval(rsave,5000);setInterval(()=>{dirty=true},300000);
 process.on('SIGTERM',async()=>{dirty=true;await rsave();process.exit(0)});
 const push=(k,p,v=0)=>{const a=S.assets[k],t=bk(),l=a.c[a.c.length-1];p=rd(p);const o=l?l.c:p;
  if(l&&l.t===t){l.h=Math.max(l.h,p);l.l=Math.min(l.l,p);l.c=p;l.v+=v}else a.c.push({t,o,h:Math.max(o,p),l:Math.min(o,p),c:p,v});
  a.c=a.c.slice(-N);a.price=p};
-setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}if(S.round.end&&!S.round.done&&Date.now()>=S.round.end)finish();lsave()},2000);
+setInterval(()=>{for(const k in S.assets){const a=S.assets[k],live=a.trend||S.auto;if(a.revert){const g=a.base-a.price;if(Math.abs(g)<=a.base*.002){const bb=a.base;a.revert=false;delete a.base;push(k,bb,3)}else push(k,a.price+g*.4+a.price*(Math.random()-.5)*.003,Math.round(Math.random()*10));continue}push(k,Math.max(.0001,a.price*(1+a.trend/100+(live?(Math.random()-.5)*.008:0))),live?Math.round(Math.random()*10):0)}if(S.round.end&&!S.round.done&&Date.now()>=S.round.end)finish();lsave()},2000);
 const hp=(pw,salt)=>crypto.scryptSync(pw,salt,32);
 const mkpw=pw=>{const salt=crypto.randomBytes(8).toString('hex');return{salt,hash:hp(pw,salt).toString('hex')}};
 const okpw=(p,pw)=>!!(p.hash&&p.salt&&crypto.timingSafeEqual(hp(pw,p.salt),Buffer.from(p.hash,'hex')));
@@ -37,7 +37,7 @@ const bad=u=>{const f=fails[u];fails[u]=f&&Date.now()-f.t<6e5?{n:f.n+1,t:Date.no
 const svTot=id=>+S.sv.log.filter(e=>e.pid===id).reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2);
 const who=req=>{const p=S.players[req.headers['x-id']];return p&&p.t===req.headers['x-token']?req.headers['x-id']:null};
 const pl=(id,p)=>({name:p.name,cash:p.cash,pos:p.pos,saved:svTot(id),user:p.user||'',avg:p.avg||{}});
-const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,k===sym?a:{price:a.price,trend:a.trend,c:a.c.slice(-1)}])),auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:(adm||S.sv.show)?S.sv.number:'',show:!!S.sv.show,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
+const pub=(adm,id,sym)=>({tape:(S.tape||[]).filter(t=>t.sym===sym).slice(-20),assets:Object.fromEntries(Object.entries(S.assets).map(([k,a])=>[k,k===sym?a:{price:a.price,trend:a.trend,base:a.base,revert:a.revert,c:a.c.slice(-1)}])),auto:S.auto,startCash:S.startCash,round:{active:!!S.round.end&&!S.round.done,done:S.round.done,winner:S.round.winner?{name:S.round.winner.name}:null,left:Math.max(0,S.round.end-Date.now())},players:adm?Object.fromEntries(Object.entries(S.players).map(([i,p])=>[i,pl(i,p)])):(id?{[id]:pl(id,S.players[id])}:{}),savings:{number:(adm||S.sv.show)?S.sv.number:'',show:!!S.sv.show,date:S.sv.date,log:adm?S.sv.log:S.sv.log.filter(e=>e.pid===id),total:adm?+S.sv.log.reduce((t,e)=>t+(e.type==='deposit'?e.amt:-e.amt),0).toFixed(2):undefined}});
 const zlib=require('zlib');
 const sendz=(req,res,o)=>{const b=Buffer.from(JSON.stringify(o));if(/gzip/.test(req.headers['accept-encoding']||'')){res.writeHead(200,{'content-type':'application/json','content-encoding':'gzip'});res.end(zlib.gzipSync(b))}else{res.writeHead(200,{'content-type':'application/json'});res.end(b)}};
 const send=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
@@ -73,9 +73,10 @@ const srv=http.createServer((req,res)=>{
    else{if((p.pos[b.sym]||0)<n-1e-9)return send(res,{error:'You don’t hold that many'});p.cash=+(p.cash+cost).toFixed(4);p.pos[b.sym]=+((p.pos[b.sym]||0)-n).toFixed(8);if(p.pos[b.sym]<=0){delete p.pos[b.sym];if(p.avg)delete p.avg[b.sym]}}
    a.c[a.c.length-1].v+=n;S.tape.push({t:Date.now(),sym:b.sym,side:b.side,price:a.price,qty:n});S.tape=S.tape.slice(-80);save();return send(res,{ok:1})}
   if(!adm)return send(res,{error:'Host only'},403);
-  if(r==='price'&&a&&+b.price>0)push(b.sym,+b.price);
-  else if(r==='nudge'&&a)push(b.sym,Math.max(.0001,a.price*(1+b.pct/100)),30);
-  else if(r==='trend'&&a)a.trend=+b.pct||0;
+  if(r==='price'&&a&&+b.price>0){if(!a.base)a.base=a.price;a.revert=false;push(b.sym,+b.price)}
+  else if(r==='nudge'&&a){if(!a.base)a.base=a.price;a.revert=false;push(b.sym,Math.max(.0001,a.price*(1+b.pct/100)),30)}
+  else if(r==='trend'&&a){if(+b.pct&&!a.base)a.base=a.price;a.trend=+b.pct||0;a.revert=false}
+  else if(r==='normal'){for(const [k,a] of Object.entries(S.assets)){if(!b.all&&k!==b.sym)continue;a.trend=0;if(a.base)a.revert=true}}
   else if(r==='add'){const k=String(b.sym||'').toUpperCase().slice(0,6);if(k&&+b.price>0&&!S.assets[k])S.assets[k]=mk(+b.price)}
   else if(r==='del'&&a&&Object.keys(S.assets).length>1)delete S.assets[b.sym];
   else if(r==='cash'&&S.players[b.id])S.players[b.id].cash=+b.cash||0;
