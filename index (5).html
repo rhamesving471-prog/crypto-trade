@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>crypto-trade</title>
+<style>
+:root{--bg:#06130d;--card:#0d1f16;--tx:#e8f5ee;--mu:#7fa592;--bd:#1c3a2a;--up:#2ee6a0;--dn:#ff6b6b;--ac:#34d399;color-scheme:dark}
+
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif}main{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0}h2{font-size:14px;margin:0 0 10px;color:var(--mu);text-transform:uppercase}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-top:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
+a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 12px}button{cursor:pointer}
+.p{background:var(--ac);color:#04130c;border-color:var(--ac);font-weight:600}.b{background:var(--up);color:#fff}.s{background:var(--dn);color:#fff}input{width:110px}.on{border-color:var(--ac)!important;color:var(--ac);font-weight:600}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mu)}.big{font-size:28px;font-weight:700}.sc{overflow-x:auto}table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu);font-weight:500;font-size:13px}.grid{display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start}@media(max-width:820px){.grid{grid-template-columns:1fr}}.stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:13px}.stats span{display:block;color:var(--mu);font-size:11px}.ob{display:flex;justify-content:space-between;font-size:12px;padding:1px 4px;font-variant-numeric:tabular-nums}
+svg{width:100%;height:auto;display:block}
+</style></head><body><main>
+<div class="row sp"><h1>📈 crypto-trade</h1><span class="row"><span id="who" class="mu"></span><button id="so" hidden>Sign out</button></span></div>
+<div class="card" id="rd" hidden><div class="row sp"><div><div class="mu">Round</div><div class="big" id="rt"></div></div><div id="rw" style="text-align:right"></div></div></div>
+<div class="card row sp"><span class="mu">Invite link: <b id="lnk"></b></span><button id="cp">Copy link</button></div>
+<div id="join" class="card" hidden><h2 id="ah">Sign in</h2><form class="row" id="af" onsubmit="return false"><input id="un" name="username" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" name="password" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"><button class="p" id="jb" type="submit">Sign in</button></form><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
+<div id="claim" class="card" hidden><h2>Create your login</h2><div class="mu">Pick a username and password so you can sign back in from any phone. Your balance stays.</div><div class="row" style="margin-top:8px"><input id="cu" placeholder="Username" maxlength="20" autocapitalize="none"><input id="cp" type="password" placeholder="Password (6+ characters)"><button class="p" id="cb">Save login</button><span id="cmsg" class="dn"></span></div></div>
+<div class="grid"><div><div class="card"><div class="row" id="tabs"></div><div class="row sp" style="margin-top:10px"><div><div class="big" id="px"></div><div id="chg"></div></div><div class="mu" id="eq" style="text-align:right"></div></div><div class="stats" id="st"></div>
+<div class="row sp" style="margin-top:10px"><div class="row" id="tf"></div><div class="row"><button id="zo">−</button><button id="zi">+</button><button id="zr">Reset</button></div></div><div class="mu" id="ohlc" style="min-height:18px;margin-top:6px;font-size:12px"></div><div id="chart"></div><div class="mu" style="font-size:12px">Scroll to zoom · drag to move · gold = MA7, purple = MA25</div></div></div>
+<div><div class="card"><h2>Order book (simulated)</h2><div id="ob"></div></div><div class="card"><h2>Recent trades</h2><div id="tp"></div></div></div></div>
+<div class="card" id="trade" hidden><h2>Trade <span class="mu" id="pair" style="font-weight:400;text-transform:none"></span></h2>
+<div class="mu" id="avail"></div>
+<div class="row" style="margin-top:8px"><input id="qty" type="number" min="0" step="any" placeholder="Amount in USDT" style="width:170px"><span class="mu">USDT</span><span id="est" class="mu"></span></div>
+<div class="row" style="margin-top:8px"><button data-amt="1">1</button><button data-amt="2">2</button><button data-amt="5">5</button><button data-amt="10">10</button><button data-pc="100">Max</button></div>
+<div class="row" style="margin-top:8px"><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><button class="s" id="sa">Cash out</button></div>
+<div id="tm" class="mu" style="margin-top:6px"></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
+<div class="card" id="lbcard" hidden><h2>Leaderboard (host only)</h2><div class="sc"><table id="lb"></table></div></div>
+<div class="card" id="admin" hidden><h2>Host controls</h2><div id="pwarn" class="dn" style="margin-bottom:10px" hidden>⚠ Accounts and balances are NOT saved permanently yet. They disappear whenever the app restarts, so friends have to sign up again. Connect Upstash (free) to fix this.</div>
+<div class="row"><input id="np" type="number" step="any"><button class="p" id="setp">Set price</button><button data-n="-10">−10%</button><button data-n="-5">−5%</button><button data-n="5">+5%</button><button data-n="10">+10%</button></div>
+<h2 style="margin:14px 0 8px">Steer the trend <span id="tr" class="mu"></span></h2><div class="row"><button class="b" data-t="1">🚀 Pump hard</button><button class="b" data-t="0.3">▲ Pump</button><button data-t="0">■ Hold</button><button class="s" data-t="-0.3">▼ Dump</button><button class="s" data-t="-1">💥 Crash</button></div>
+<div class="row" style="margin-top:8px"><button class="p" id="nm">↩ Back to normal</button><button id="nma">All coins back to normal</button><span class="mu" id="nmt"></span></div>
+<div class="row" style="margin-top:10px"><button id="auto"></button><input id="ns" placeholder="Ticker" maxlength="6"><input id="nsp" type="number" placeholder="Price"><button id="adds">Add asset</button><button id="dels">Remove this asset</button></div>
+<h2 style="margin-top:16px">Round timer</h2><div class="row"><input id="rm" type="number" min="0.1" step="any" value="10" style="width:80px"><span class="mu">minutes</span><button class="p" id="rs">Start round</button><button class="s" id="re">End now</button><button id="rr">Reset</button></div><div class="mu" style="margin-top:6px">When the timer ends, trading stops and the winner is shown to everyone.</div>
+<h2 style="margin-top:16px">Players (play money)</h2><div class="row" style="margin-bottom:8px"><span class="mu">New players start with (USDT):</span><input id="sc" type="number" step="any" style="width:90px"><button id="scb">Save</button></div><div class="sc"><table id="pl"></table></div></div>
+</main><script>
+const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
+if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',location.pathname)}
+let S=null,sel=null,me=JSON.parse(localStorage.me||'null'),host=false;
+const m=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}),pf=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:n>=10?2:4,maximumFractionDigits:n>=10?2:4}),f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||'','x-id':me?me.id:'','x-token':me?me.token:''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
+async function load(){const s=await api('state?sym='+encodeURIComponent(sel||''));if(s.assets){S=s;host=s.admin;render();renderSv();renderRound()}}
+const eq=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
+function render(){
+ if(me&&!S.players[me.id]){me=null;localStorage.removeItem('me')}
+ const keys=Object.keys(S.assets);if(!sel||!S.assets[sel])sel=keys[0];
+ $('#join').hidden=!!me;$('#trade').hidden=!me;$('#admin').hidden=!host;$('#who').textContent=(host?'Host · ':'')+(me?S.players[me.id].name:'');
+ $('#tabs').innerHTML=keys.map(k=>'<button data-k="'+k+'" class="'+(k===sel?'on':'')+'">'+k+'</button>').join('');
+ const a=S.assets[sel],c=a.c;if(c.length<10){if(!ld){ld=1;load().then(()=>ld=0)}return}const ch=(a.price-c[0].o)/c[0].o*100;
+ const pp=me&&S.players[me.id];$('#px').innerHTML=pp?'<span class="mu" style="font-size:12px;font-weight:400;display:block">Your balance</span>'+m(eq(pp))+' USDT':'<span class="mu" style="font-size:16px;font-weight:400">Sign in to see your balance</span>';$('#chg').innerHTML='<span class="mu">'+sel+' </span><span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'▲':'▼')+' '+f(Math.abs(ch))+'%</span>';
+ const hi=Math.max(...c.map(x=>x.h)),lo=Math.min(...c.map(x=>x.l)),vo=c.reduce((q,x)=>q+x.v,0);
+ $('#st').innerHTML='<div><span>High</span>'+pf(hi)+'</div><div><span>Low</span>'+pf(lo)+'</div><div><span>Volume</span>'+Math.round(vo).toLocaleString()+'</div><div><span>History</span>'+Math.round(c.length/6)+' min</div>';
+ $('#tf').innerHTML=TFS.map(([q,l])=>'<button data-tf="'+q+'" class="'+(q===tf?'on':'')+'">'+l+'</button>').join('');
+ drawChart();$('#ob').innerHTML=book(a.price);$('#tp').innerHTML=tape();
+ if(me){const p=S.players[me.id];$('#eq').innerHTML='Cash '+m(p.cash)+' USDT<br>In trades '+m(eq(p)-p.cash)+' USDT';$('#hold').textContent='You hold '+m((p.pos[sel]||0)*a.price)+' USDT of '+sel+(p.avg&&p.avg[sel]?' · entry '+pf(p.avg[sel])+' · P/L '+(a.price>=p.avg[sel]?'+':'−')+m(Math.abs((a.price-p.avg[sel])*(p.pos[sel]||0)))+' USDT':'')}else $('#eq').textContent='';
+ const rows=Object.entries(S.players).map(([id,p])=>({id,p,e:eq(p)})).sort((x,y)=>y.e-x.e);
+ $('#lb').innerHTML='<tr><th>#</th><th>Player</th><th>Cash (USDT)</th><th>Total (USDT)</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.p.name)+(me&&r.id===me.id?' (you)':'')+'</td><td>'+m(r.p.cash)+'</td><td>'+m(r.e)+'</td></tr>').join('');
+ $('#lnk').textContent=location.origin;
+ if(host){$('#nmt').textContent=a.revert?'Returning to normal…':(a.base?'Normal price: '+pf(a.base):'');$('#tr').textContent=a.trend?'(now '+(a.trend>0?'+':'')+a.trend+'% per 2s)':'(holding)';$('#auto').textContent='Random wiggle: '+(S.auto?'on':'off');if(document.activeElement.id!=='np')$('#np').value=a.price;
+  if(!$('#pl').contains(document.activeElement))$('#pl').innerHTML='<tr><th>Player</th><th>Cash</th><th></th></tr>'+rows.map(r=>'<tr><td>'+esc(r.p.name)+' <span class="mu">'+(r.p.user?'@'+esc(r.p.user):'no login')+'</span></td><td><input type="number" step="any" value="'+r.p.cash+'" id="c_'+r.id+'"></td><td><button data-c="'+r.id+'">Set cash</button> <button data-u="'+r.id+'">+5 USDT play</button> <button data-r="'+r.id+'">Clear holdings</button> <button data-p="'+r.id+'">Reset password</button> <button data-x="'+r.id+'">Remove</button></td></tr>').join('')}}
+const TFS=[[10,'10s'],[30,'30s'],[60,'1m'],[300,'5m']];let md='usd',tf=10,vis=60,off=0,hx=null,CV=null,ld=0,drag=null;
+const agg=(c,sec)=>{if(sec===10)return c;const ms=sec*1000,o=[];for(const x of c){const b=Math.floor(x.t/ms)*ms,l=o[o.length-1];if(l&&l.t===b){l.h=Math.max(l.h,x.h);l.l=Math.min(l.l,x.l);l.c=x.c;l.v+=x.v}else o.push({t:b,o:x.o,h:x.h,l:x.l,c:x.c,v:x.v})}return o};
+const ma=(c,n)=>c.map((_,i)=>i<n-1?null:c.slice(i-n+1,i+1).reduce((q,x)=>q+x.c,0)/n);
+const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:tf<60?'2-digit':undefined});
+function setO(x,a7,a25){$('#ohlc').innerHTML=hm(x.t)+' &nbsp;O '+pf(x.o)+' H '+pf(x.h)+' L '+pf(x.l)+' C '+pf(x.c)+' &nbsp;Vol '+Math.round(x.v)+' &nbsp;<span style="color:#f0b90b">MA7 '+(a7==null?'–':pf(a7))+'</span> <span style="color:#c084fc">MA25 '+(a25==null?'–':pf(a25))+'</span>'}
+function showX(x,y){if(!CV)return;const g=$('#xh');if(!g)return;const i=Math.min(CV.c.length-1,Math.max(0,Math.floor(x/CV.cw))),cx=i*CV.cw+CV.cw/2,yy=Math.min(Math.max(y,10),10+CV.ph),v=CV.mx-(yy-10)/CV.ph*(CV.mx-CV.mn);g.style.display='';
+ $('#xv').setAttribute('x1',cx);$('#xv').setAttribute('x2',cx);$('#xl').setAttribute('y1',yy);$('#xl').setAttribute('y2',yy);$('#xr').setAttribute('y',yy-9);$('#xt').setAttribute('y',yy+4);$('#xt').textContent=pf(v);setO(CV.c[i],CV.m7[i],CV.m25[i])}
+function drawChart(){
+ const a=S.assets[sel];if(!a||!a.c||a.c.length<10)return;
+ const c0=agg(a.c,tf),n0=c0.length;vis=Math.min(Math.max(vis,15),Math.max(15,n0));off=Math.min(Math.max(off,0),Math.max(0,n0-vis));
+ const end=n0-off,st=Math.max(0,end-vis),c=c0.slice(st,end),n=c.length,m7=ma(c0,7).slice(st,end),m25=ma(c0,25).slice(st,end);
+ const mp=me&&S.players[me.id],en=mp&&mp.avg?mp.avg[sel]:0;
+ const W=900,H=430,pr=64,ph=300,vy=335,vh=60,pw=W-pr;
+ let mn=Math.min(...c.map(x=>x.l)),mx=Math.max(...c.map(x=>x.h));if(en){mn=Math.min(mn,en);mx=Math.max(mx,en)}
+ const pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
+ const Y=v=>10+(mx-v)/(mx-mn)*ph,cw=pw/n,vm=Math.max(...c.map(x=>x.v))||1;let s='';
+ for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,y=Y(v);s+='<line x1="0" x2="'+pw+'" y1="'+y+'" y2="'+y+'" stroke="var(--bd)"/><text x="'+(W-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="12" fill="var(--mu)">'+pf(v)+'</text>'}
+ for(let i=0;i<n;i+=Math.max(1,Math.round(n/6)))s+='<text x="'+(i*cw+cw/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="var(--mu)">'+hm(c[i].t)+'</text>';
+ c.forEach((x,i)=>{const col=x.c>=x.o?'var(--up)':'var(--dn)',cx=i*cw+cw/2,bw=Math.max(1,cw*.7),yo=Y(x.o),yc=Y(x.c),h=x.v/vm*vh;
+  s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+Math.min(yo,yc)+'" width="'+bw+'" height="'+Math.max(1,Math.abs(yo-yc))+'" fill="'+col+'"/><rect x="'+(cx-bw/2)+'" y="'+(vy+vh-h)+'" width="'+bw+'" height="'+h+'" fill="'+col+'" opacity=".4"/>'});
+ const ln=(arr,col)=>{const p=arr.map((v,i)=>v==null?null:(i*cw+cw/2)+','+Y(v)).filter(Boolean).join(' ');return p?'<polyline fill="none" stroke="'+col+'" stroke-width="1.3" points="'+p+'"/>':''};
+ s+=ln(m7,'#f0b90b')+ln(m25,'#c084fc');
+ if(en){const ey=Y(en);s+='<line x1="0" x2="'+pw+'" y1="'+ey+'" y2="'+ey+'" stroke="#f0b90b" stroke-width="1.5" stroke-dasharray="6 4"/><text x="6" y="'+(ey-5)+'" font-size="11" fill="#f0b90b">Your entry '+pf(en)+'</text>'}
+ const l=c[n-1],ly=Y(l.c),lc=l.c>=l.o?'var(--up)':'var(--dn)';
+ s+='<line x1="0" x2="'+pw+'" y1="'+ly+'" y2="'+ly+'" stroke="'+lc+'" stroke-dasharray="4 3"/><rect x="'+pw+'" y="'+(ly-9)+'" width="'+pr+'" height="18" fill="'+lc+'"/><text x="'+(W-4)+'" y="'+(ly+4)+'" text-anchor="end" font-size="11" fill="#fff">'+pf(l.c)+'</text>';
+ s+='<g id="xh" style="display:none"><line id="xv" y1="10" y2="'+(vy+vh)+'" stroke="var(--mu)" stroke-dasharray="3 3"/><line id="xl" x1="0" x2="'+pw+'" stroke="var(--mu)" stroke-dasharray="3 3"/><rect id="xr" x="'+pw+'" width="'+pr+'" height="18" fill="#1f5a40"/><text id="xt" x="'+(W-4)+'" text-anchor="end" font-size="11" fill="#fff"></text></g>';
+ CV={c,m7,m25,cw,pw,mn,mx,ph,W,H,pr};
+ $('#chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="touch-action:pan-y;cursor:crosshair">'+s+'</svg>';
+ setO(l,m7[n-1],m25[n-1]);if(hx)showX(hx.x,hx.y)}
+const cbx=$('#chart'),pxy=e=>{const r=cbx.querySelector('svg').getBoundingClientRect(),k=CV.W/r.width;return[(e.clientX-r.left)*k,(e.clientY-r.top)*k]};
+cbx.addEventListener('pointermove',e=>{if(!CV||!cbx.querySelector('svg'))return;const[x,y]=pxy(e);if(drag){off=drag.off+Math.round((x-drag.x)/CV.cw);hx=null;drawChart();return}hx={x,y};showX(x,y)});
+cbx.addEventListener('pointerdown',e=>{if(!CV||!cbx.querySelector('svg'))return;const[x]=pxy(e);drag={x,off};try{cbx.setPointerCapture(e.pointerId)}catch(z){}});
+cbx.addEventListener('pointerup',()=>{drag=null});cbx.addEventListener('pointerleave',()=>{hx=null;drag=null;drawChart()});
+cbx.addEventListener('wheel',e=>{e.preventDefault();vis=Math.round(vis*(e.deltaY>0?1.15:.87));drawChart()},{passive:false});
+function book(price){const tb=Math.floor(Date.now()/3000),rr=(i,d)=>{const q=Math.sin(i*12.9898+d*78.233+tb)*43758.5453;return q-Math.floor(q)},stp=price*0.0004;
+ const side=d=>{const o=[];for(let i=1;i<=8;i++)o.push([price+d*stp*i,(200+rr(i,d)*2000)/price]);return o};
+ const asks=side(1).reverse(),bids=side(-1),mx=Math.max(...asks.concat(bids).map(r=>r[1]));
+ const row=(r,col)=>'<div class="ob" style="background:linear-gradient(to left,'+col+'33 '+(r[1]/mx*100)+'%,transparent 0)"><span style="color:'+col+'">'+pf(r[0])+'</span><span>'+Math.round(r[1]*r[0]).toLocaleString()+'</span></div>';
+ return '<div class="ob mu"><span>Price</span><span>USDT</span></div>'+asks.map(r=>row(r,'#f6465d')).join('')+'<div style="font-size:18px;font-weight:700;margin:6px 4px">'+pf(price)+' <span class="mu" style="font-size:12px">USDT</span></div>'+bids.map(r=>row(r,'#0ecb81')).join('')}
+function tape(){const t=(S.tape||[]).slice().reverse();return t.length?t.map(x=>'<div class="ob"><span style="color:'+(x.side==='buy'?'#0ecb81':'#f6465d')+'">'+pf(x.price)+'</span><span>'+m(x.qty*x.price)+'</span><span class="mu">'+hm(x.t)+'</span></div>').join(''):'<div class="mu">No trades yet</div>'}
+let rt0=0,rl0=0;
+function renderRound(){const r=S.round;rt0=Date.now();rl0=r.left;$('#rd').hidden=!(r.active||r.done);tick()}
+function tick(){const r=S.round;if(!r)return;if(r.done){$('#rt').textContent='Round over';$('#rw').innerHTML=r.winner?'🏆 Winner: <b>'+esc(r.winner.name)+'</b>':'';return}
+ if(!r.active)return;const l=Math.max(0,rl0-(Date.now()-rt0)),q=Math.floor(l/1000);$('#rt').textContent=String(Math.floor(q/60)).padStart(2,'0')+':'+String(q%60).padStart(2,'0')+' left';$('#rw').textContent=l?'':'Finishing…'}
+setInterval(tick,1000);
+let reg=false;
+function authUi(){$('#ah').textContent=reg?'Create account · you start with '+m(S.startCash)+' USDT':'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
+function tradeUi(){const a=S.assets[sel],v=+$('#qty').value,p=me&&S.players[me.id];$('#pair').textContent=sel+'/USDT';$('#avail').textContent=p?'Available: '+m(p.cash)+' USDT':'';$('#est').textContent=''}
+function renderSv(){tradeUi();
+ const id=me&&me.id,p=id&&S.players[id];
+ $('#claim').hidden=!(p&&!p.user);$('#so').hidden=!me;authUi();$('#lbcard').hidden=!host;
+ if(!host)return;
+ $('#pwarn').hidden=!!S.persist;const ae=document.activeElement.id;
+ if(ae!=='sc')$('#sc').value=S.startCash}
+async function act(p,b){await api(p,b);load()}
+document.addEventListener('input',e=>{if(e.target.id==='qty')tradeUi()});
+document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
+ if(d.k){sel=d.k;off=0;hx=null;load()}if(d.tf){tf=+d.tf;off=0;vis=60;render()}if(t.id==='zi'){vis=Math.max(15,Math.round(vis*.8));drawChart()}if(t.id==='zo'){vis=Math.min(240,Math.round(vis*1.25));drawChart()}if(t.id==='zr'){vis=60;off=0;drawChart()}
+ if(t.id==='cp'){try{await navigator.clipboard.writeText(location.origin);t.textContent='Copied!'}catch(x){t.textContent='Copy it from the address bar'}setTimeout(()=>t.textContent='Copy link',2000)}
+  if(t.id==='sw'){e.preventDefault();reg=!reg;authUi()}
+ if(t.id==='jb'){const r=await api(reg?'register':'login',{username:$('#un').value,password:$('#pw').value});if(r.id){me=r;localStorage.me=JSON.stringify(r);$('#pw').value='';$('#amsg').textContent='';load()}else $('#amsg').textContent=r.error||'Try again'}
+ if(t.id==='cb'){const r=await api('setlogin',{id:me.id,token:me.token,username:$('#cu').value,password:$('#cp').value});$('#cmsg').textContent=r.error||'';if(!r.error){$('#cp').value='';load()}}
+ if(t.id==='so'){localStorage.removeItem('me');me=null;load()}
+ 
+ if(t.id==='buy'||t.id==='sell'||t.id==='sa'){const p=me&&S.players[me.id],a=S.assets[sel],tm=$('#tm');if(!p)return;
+ const held=p.pos[sel]||0;let side=t.id==='buy'?'buy':'sell',q=0,v=+$('#qty').value;
+ if(t.id==='sa'){if(!(held>0)){tm.textContent='You have nothing in '+sel+' to cash out';return}q=held}
+ else{if(!(v>0)){tm.textContent='Enter an amount in USDT, or tap a quick amount';return}q=md==='usd'?v/a.price:v;
+  if(side==='buy'){const mq=Math.floor(p.cash/a.price*1e8)/1e8;q=Math.floor(q*1e8)/1e8;if(md==='usd'&&q>mq&&v<=p.cash+0.005)q=mq}
+  else{q=Math.min(q,held);if(md==='usd'&&v>=held*a.price-0.005)q=held;if(q<held)q=Math.floor(q*1e8)/1e8}}
+ if(!(q>0)){tm.textContent='That amount is too small';return}
+ const r=await api('trade',{id:me.id,token:me.token,sym:sel,side,qty:q});
+ tm.textContent=r.error||((t.id==='sa'?'Cashed out ':side==='buy'?'Bought ':'Sold ')+f(q*a.price)+' USDT '+(side==='buy'?'of ':'from ')+sel);
+ if(!r.error){$('#qty').value='';tradeUi()}load()}
+ if(d.m){md=d.m;$('#qty').value='';tradeUi()}
+ if(d.amt){$('#qty').value=d.amt;tradeUi()}
+ if(d.pc&&me&&S.players[me.id]){const c=S.players[me.id].cash*d.pc/100;$('#qty').value=md==='usd'?Math.floor(c*100)/100:Math.floor(c/S.assets[sel].price*1e8)/1e8;tradeUi()}
+ if(!host)return;
+ if(t.id==='setp')act('price',{sym:sel,price:$('#np').value});
+ if(d.t!==undefined)act('trend',{sym:sel,pct:+d.t});
+ if(d.n)act('nudge',{sym:sel,pct:+d.n});
+ if(t.id==='auto')act('auto',{on:!S.auto});
+ if(t.id==='adds'){act('add',{sym:$('#ns').value,price:$('#nsp').value});$('#ns').value=''}
+ if(t.id==='dels')act('del',{sym:sel});
+ if(d.c)act('cash',{id:d.c,cash:$('#c_'+d.c).value});
+ if(d.r)act('clear',{id:d.r});
+ if(t.id==='scb')act('startcash',{amt:$('#sc').value});if(t.id==='nm')act('normal',{sym:sel});if(t.id==='nma')act('normal',{all:true});if(t.id==='rs')act('roundstart',{min:$('#rm').value});if(t.id==='re')act('roundend',{});if(t.id==='rr')act('roundreset',{});
+ if(d.p){const pw=prompt('New password for this player (6+ characters)');if(pw){const u=S.players[d.p].user?'':prompt('Choose a username for this player (letters, numbers, _)');const r=await api('resetpw',{id:d.p,password:pw,username:u});if(r.error)alert(r.error);load()}}
+ if(d.u)act('topup',{id:d.u,amt:5});
+  
+ if(d.x)act('kick',{id:d.x})});
+load();setInterval(load,2000);
+</script></body></html>
