@@ -11,7 +11,6 @@ a{color:var(--ac)}button,input,select{font:inherit;color:var(--tx);background:va
 svg{width:100%;height:auto;display:block}
 </style></head><body><main>
 <div class="row sp"><h1>📈 crypto-trade</h1><span class="row"><span id="who" class="mu"></span><button id="so" hidden>Sign out</button></span></div>
-<div class="card" id="rd" hidden><div class="row sp"><div><div class="mu">Round</div><div class="big" id="rt"></div></div><div id="rw" style="text-align:right"></div></div></div>
 <div class="card row sp"><span class="mu">Invite link: <b id="lnk"></b></span><button id="cp">Copy link</button></div>
 <div id="join" class="card" hidden><h2 id="ah">Sign in</h2><form class="row" id="af" onsubmit="return false"><input id="un" name="username" placeholder="Username" maxlength="20" autocapitalize="none" autocomplete="username"><input id="pw" name="password" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"><button class="p" id="jb" type="submit">Sign in</button></form><div class="mu" style="margin-top:8px"><a href="#" id="sw">New here? Create an account</a> <span id="amsg" class="dn"></span></div></div>
 <div id="claim" class="card" hidden><h2>Create your login</h2><div class="mu">Pick a username and password so you can sign back in from any phone. Your balance stays.</div><div class="row" style="margin-top:8px"><input id="cu" placeholder="Username" maxlength="20" autocapitalize="none"><input id="cp" type="password" placeholder="Password (6+ characters)"><button class="p" id="cb">Save login</button><span id="cmsg" class="dn"></span></div></div>
@@ -24,13 +23,15 @@ svg{width:100%;height:auto;display:block}
 <div class="row" style="margin-top:8px"><button data-amt="1">1</button><button data-amt="2">2</button><button data-amt="5">5</button><button data-amt="10">10</button><button data-pc="100">Max</button></div>
 <div class="row" style="margin-top:8px"><button class="b" id="buy">Buy</button><button class="s" id="sell">Sell</button><button class="s" id="sa">Cash out</button></div>
 <div id="tm" class="mu" style="margin-top:6px"></div><div class="mu" id="hold" style="margin-top:8px"></div></div>
+<div class="card" id="ss" hidden><h2>My timer <span class="mu" style="text-transform:none;font-weight:400">(only you can see this)</span></h2>
+<div id="sst" class="big"></div><div id="ssm" class="mu"></div>
+<div class="row" style="margin-top:8px"><input id="ssn" type="number" min="1" step="any" value="10" style="width:80px"><span class="mu">minutes</span><button class="p" id="ssb">Start timer</button><button id="ssx" hidden>Stop timer</button></div></div>
 <div class="card" id="lbcard" hidden><h2>Leaderboard (host only)</h2><div class="sc"><table id="lb"></table></div></div>
 <div class="card" id="admin" hidden><h2>Host controls</h2><div id="pwarn" class="dn" style="margin-bottom:10px" hidden>⚠ Accounts and balances are NOT saved permanently yet. They disappear whenever the app restarts, so friends have to sign up again. Connect Upstash (free) to fix this.</div>
 <div class="row"><input id="np" type="number" step="any"><button class="p" id="setp">Set price</button><button data-n="-10">−10%</button><button data-n="-5">−5%</button><button data-n="5">+5%</button><button data-n="10">+10%</button></div>
 <h2 style="margin:14px 0 8px">Steer the trend <span id="tr" class="mu"></span></h2><div class="row"><button class="b" data-t="1">🚀 Pump hard</button><button class="b" data-t="0.3">▲ Pump</button><button data-t="0">■ Hold</button><button class="s" data-t="-0.3">▼ Dump</button><button class="s" data-t="-1">💥 Crash</button></div>
 <div class="row" style="margin-top:8px"><button class="p" id="nm">↩ Back to normal</button><button id="nma">All coins back to normal</button><span class="mu" id="nmt"></span></div>
 <div class="row" style="margin-top:10px"><button id="auto"></button><input id="ns" placeholder="Ticker" maxlength="6"><input id="nsp" type="number" placeholder="Price"><button id="adds">Add asset</button><button id="dels">Remove this asset</button></div>
-<h2 style="margin-top:16px">Round timer</h2><div class="row"><input id="rm" type="number" min="0.1" step="any" value="10" style="width:80px"><span class="mu">minutes</span><button class="p" id="rs">Start round</button><button class="s" id="re">End now</button><button id="rr">Reset</button></div><div class="mu" style="margin-top:6px">When the timer ends, trading stops and the winner is shown to everyone.</div>
 <h2 style="margin-top:16px">Players (play money)</h2><div class="row" style="margin-bottom:8px"><span class="mu">New players start with (USDT):</span><input id="sc" type="number" step="any" style="width:90px"><button id="scb">Save</button></div><div class="sc"><table id="pl"></table></div></div>
 </main><script>
 const $=s=>document.querySelector(s),Q=new URLSearchParams(location.search);
@@ -38,7 +39,7 @@ if(Q.get('admin')){localStorage.adm=Q.get('admin');history.replaceState(0,'',loc
 let S=null,sel=null,me=JSON.parse(localStorage.me||'null'),host=false;
 const m=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}),pf=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:n>=10?2:4,maximumFractionDigits:n>=10?2:4}),f=n=>(+n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function api(p,b){try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-admin':localStorage.adm||'','x-id':me?me.id:'','x-token':me?me.token:''},body:b?JSON.stringify(b):undefined});return await r.json()}catch(e){return{error:'Connection lost'}}}
-async function load(){const s=await api('state?sym='+encodeURIComponent(sel||''));if(s.assets){S=s;host=s.admin;render();renderSv();renderRound()}}
+async function load(){const s=await api('state?sym='+encodeURIComponent(sel||''));if(s.assets){S=s;sFetch=Date.now();host=s.admin;render();renderSv();tickS()}}
 const eq=p=>{let t=p.cash;for(const k in p.pos)if(S.assets[k])t+=p.pos[k]*S.assets[k].price;return t};
 function render(){
  if(me&&!S.players[me.id]){me=null;localStorage.removeItem('me')}
@@ -97,11 +98,13 @@ function book(price){const tb=Math.floor(Date.now()/3000),rr=(i,d)=>{const q=Mat
  const row=(r,col)=>'<div class="ob" style="background:linear-gradient(to left,'+col+'33 '+(r[1]/mx*100)+'%,transparent 0)"><span style="color:'+col+'">'+pf(r[0])+'</span><span>'+Math.round(r[1]*r[0]).toLocaleString()+'</span></div>';
  return '<div class="ob mu"><span>Price</span><span>USDT</span></div>'+asks.map(r=>row(r,'#f6465d')).join('')+'<div style="font-size:18px;font-weight:700;margin:6px 4px">'+pf(price)+' <span class="mu" style="font-size:12px">USDT</span></div>'+bids.map(r=>row(r,'#0ecb81')).join('')}
 function tape(){const t=(S.tape||[]).slice().reverse();return t.length?t.map(x=>'<div class="ob"><span style="color:'+(x.side==='buy'?'#0ecb81':'#f6465d')+'">'+pf(x.price)+'</span><span>'+m(x.qty*x.price)+'</span><span class="mu">'+hm(x.t)+'</span></div>').join(''):'<div class="mu">No trades yet</div>'}
-let rt0=0,rl0=0;
-function renderRound(){const r=S.round;rt0=Date.now();rl0=r.left;$('#rd').hidden=!(r.active||r.done);tick()}
-function tick(){const r=S.round;if(!r)return;if(r.done){$('#rt').textContent='Round over';$('#rw').innerHTML=r.winner?'🏆 Winner: <b>'+esc(r.winner.name)+'</b>':'';return}
- if(!r.active)return;const l=Math.max(0,rl0-(Date.now()-rt0)),q=Math.floor(l/1000);$('#rt').textContent=String(Math.floor(q/60)).padStart(2,'0')+':'+String(q%60).padStart(2,'0')+' left';$('#rw').textContent=l?'':'Finishing…'}
-setInterval(tick,1000);
+let sFetch=0;const pad2=n=>String(Math.floor(n)).padStart(2,'0');
+function tickS(){const p=me&&S&&S.players&&S.players[me.id],s=p&&p.sess;$('#ss').hidden=!p;if(!p)return;
+ const left=s?s.end-(S.now+(Date.now()-sFetch)):0;
+ if(!s){$('#sst').textContent='No timer running';$('#ssm').textContent='Start one to set a time limit for your own trading. Nobody else can see it.';$('#ssb').textContent='Start timer';$('#ssx').hidden=true}
+ else if(!s.done&&left>0){const q=Math.floor(left/1000);$('#sst').textContent=pad2(q/60)+':'+pad2(q%60)+' left';$('#ssm').textContent='Your trading locks when it reaches zero.';$('#ssb').textContent='Restart timer';$('#ssx').hidden=false}
+ else{const fe=s.endEq!==undefined?s.endEq:eq(p),d=fe-s.startEq;$('#sst').textContent='Time’s up';$('#ssm').textContent='Your result: '+m(fe)+' USDT ('+(d>=0?'+':'−')+m(Math.abs(d))+' USDT). Trading is locked. Start a new timer to continue.';$('#ssb').textContent='Start new timer';$('#ssx').hidden=false}}
+setInterval(tickS,1000);
 let reg=false;
 function authUi(){$('#ah').textContent=reg?'Create account · you start with '+m(S.startCash)+' USDT':'Sign in';$('#jb').textContent=reg?'Create account':'Sign in';$('#sw').textContent=reg?'Already have an account? Sign in':'New here? Create an account';$('#pw').autocomplete=reg?'new-password':'current-password'}
 function tradeUi(){const a=S.assets[sel],v=+$('#qty').value,p=me&&S.players[me.id];$('#pair').textContent=sel+'/USDT';$('#avail').textContent=p?'Available: '+m(p.cash)+' USDT':'';$('#est').textContent=''}
@@ -120,6 +123,8 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='jb'){const r=await api(reg?'register':'login',{username:$('#un').value,password:$('#pw').value});if(r.id){me=r;localStorage.me=JSON.stringify(r);$('#pw').value='';$('#amsg').textContent='';load()}else $('#amsg').textContent=r.error||'Try again'}
  if(t.id==='cb'){const r=await api('setlogin',{id:me.id,token:me.token,username:$('#cu').value,password:$('#cp').value});$('#cmsg').textContent=r.error||'';if(!r.error){$('#cp').value='';load()}}
  if(t.id==='so'){localStorage.removeItem('me');me=null;load()}
+ if(t.id==='ssb'&&me){await api('sessionstart',{id:me.id,token:me.token,min:$('#ssn').value});load()}
+ if(t.id==='ssx'&&me){await api('sessionstop',{id:me.id,token:me.token});load()}
  
  if(t.id==='buy'||t.id==='sell'||t.id==='sa'){const p=me&&S.players[me.id],a=S.assets[sel],tm=$('#tm');if(!p)return;
  const held=p.pos[sel]||0;let side=t.id==='buy'?'buy':'sell',q=0,v=+$('#qty').value;
@@ -143,7 +148,7 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(t.id==='dels')act('del',{sym:sel});
  if(d.c)act('cash',{id:d.c,cash:$('#c_'+d.c).value});
  if(d.r)act('clear',{id:d.r});
- if(t.id==='scb')act('startcash',{amt:$('#sc').value});if(t.id==='nm')act('normal',{sym:sel});if(t.id==='nma')act('normal',{all:true});if(t.id==='rs')act('roundstart',{min:$('#rm').value});if(t.id==='re')act('roundend',{});if(t.id==='rr')act('roundreset',{});
+ if(t.id==='scb')act('startcash',{amt:$('#sc').value});if(t.id==='nm')act('normal',{sym:sel});if(t.id==='nma')act('normal',{all:true});
  if(d.p){const pw=prompt('New password for this player (6+ characters)');if(pw){const u=S.players[d.p].user?'':prompt('Choose a username for this player (letters, numbers, _)');const r=await api('resetpw',{id:d.p,password:pw,username:u});if(r.error)alert(r.error);load()}}
  if(d.u)act('topup',{id:d.u,amt:5});
   
